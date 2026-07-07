@@ -87,8 +87,26 @@ svg{display:block}
   text-align:center;border:1.5px solid var(--line);background:var(--panel2);color:var(--txt);
   outline:none;font-variant-numeric:tabular-nums;transition:border-color .15s,box-shadow .15s}
 #scan:focus{border-color:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb, var(--blue) 18%, transparent)}
-.scanwrap .sicon{position:absolute;right:30px;top:50%;transform:translateY(-50%);color:var(--mut2);pointer-events:none}
-.scanwrap .sicon svg{width:18px;height:18px}
+.scanwrap .sicon{position:absolute;right:24px;top:50%;transform:translateY(-50%);color:var(--blue);
+  cursor:pointer;padding:8px;border-radius:9px}
+.scanwrap .sicon:active{background:var(--panel)}
+.scanwrap .sicon svg{width:20px;height:20px}
+/* per-box aim button — scan straight into this From/To box */
+.binbox .binaim{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:8px;
+  border:1px solid var(--line);background:var(--panel2);color:var(--blue);
+  display:flex;align-items:center;justify-content:center;padding:0}
+.binbox .binaim svg{width:14px;height:14px}
+.binbox .binaim:active{background:var(--panel)}
+/* in-camera feedback bar + continuous-scan controls */
+#camStatus{margin:0 16px 10px;padding:11px 13px;border-radius:var(--radius-sm);font-size:13px;
+  line-height:1.45;background:var(--panel2);border:1px solid var(--line);color:var(--txt);min-height:44px;
+  display:flex;align-items:center}
+#camStatus.ok{border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
+#camStatus.warn{border-color:color-mix(in srgb,var(--amber) 45%,var(--line))}
+#camStatus.err{border-color:color-mix(in srgb,var(--danger) 45%,var(--line))}
+#camDone{margin:0 16px 16px;padding:15px;border-radius:13px;border:none;background:var(--ok);
+  color:#04160e;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px}
+#camDone svg{width:16px;height:16px}
 .hint{text-align:center;font-size:11px;color:var(--mut2);padding:6px 16px 0;min-height:15px}
 
 /* ── flash confirmation ───────────────────── */
@@ -211,10 +229,12 @@ svg{display:block}
 <div class="binbar">
   <div class="binbox" id="fromBox">
     <div class="lbl"> From</div><div class="val" id="fromVal"></div>
+    <button class="binaim" data-t="from" title="Scan into From"></button>
   </div>
   <div class="arrow"></div>
   <div class="binbox" id="toBox">
     <div class="lbl"> To</div><div class="val" id="toVal"></div>
+    <button class="binaim" data-t="to" title="Scan into To"></button>
   </div>
 </div>
 
@@ -253,8 +273,10 @@ svg{display:block}
 <!-- camera sheet -->
 <div class="sheet" id="camSheet">
   <div class="sheetin">
-    <div class="sheethead"><span>Camera scan</span><span class="x" onclick="stopCam()"></span></div>
+    <div class="sheethead"><span id="camTitle">Camera scan</span><span class="x" onclick="stopCam()"></span></div>
     <div id="camview"><div id="reader"></div></div>
+    <div id="camStatus">Point at a bin QR or item barcode</div>
+    <button id="camDone" onclick="stopCam()">Done</button>
   </div>
 </div>
 
@@ -355,8 +377,10 @@ document.querySelectorAll('.mark').forEach(e=>e.innerHTML=ICONS.box);
 document.getElementById('fromBox').querySelector('.lbl').innerHTML = ICONS.from+' From';
 document.getElementById('toBox').querySelector('.lbl').innerHTML = ICONS.to+' To';
 document.querySelector('.arrow').innerHTML = ICONS.arrow;
-document.querySelector('.scanwrap .sicon').innerHTML = ICONS.scan;
+document.querySelector('.scanwrap .sicon').innerHTML = ICONS.cam;
 document.querySelector('.tapempty').innerHTML = ICONS.empty + document.querySelector('.tapempty').innerHTML;
+document.querySelectorAll('.binaim').forEach(b=>b.innerHTML = ICONS.scan);
+document.getElementById('camDone').innerHTML = ICONS.check+'Done';
 document.getElementById('btnCam').innerHTML = ICONS.cam+'Camera';
 document.getElementById('btnExport').innerHTML = ICONS.export+'Export CSV (0)';
 document.querySelectorAll('.sheethead .x').forEach(e=>e.innerHTML=ICONS.x);
@@ -801,28 +825,81 @@ function pickBin(name){
   renderBins(); closeBin();
 }
 
-/* ══ CAMERA ══ */
-let scanner=null;
-document.getElementById('btnCam').onclick = ()=>{
+/* ══ CAMERA — continuous scan, per-box aiming, in-camera feedback ══
+   - Stays open and keeps reading (bulk scanning) until you tap Done.
+   - camBinTarget (one-shot 'from'|'to') aims the NEXT bin scan at that box,
+     then reverts to mode routing so you can keep scanning items after.
+   - Debounce: same code held in view is ignored for 1.5s, plus a 500ms
+     cooldown between distinct reads so one barcode doesn't fire repeatedly. */
+let scanner=null, camBinTarget=null, camLast='', camLastT=0;
+function camStatus(kind, msg){
+  const el=document.getElementById('camStatus');
+  el.className=kind||''; el.textContent=msg;
+}
+function openCamera(binT){
+  camBinTarget = binT || null;
+  camLast=''; camLastT=0;
+  document.getElementById('camTitle').textContent =
+    camBinTarget ? ('Scan the '+camBinTarget.toUpperCase()+' bin') : 'Camera scan';
+  camStatus('', camBinTarget ? ('Aim at the '+camBinTarget.toUpperCase()+' bin QR label')
+                             : 'Point at a bin QR or an item barcode — keep scanning, tap Done when finished');
   document.getElementById('camSheet').classList.add('open');
   scanner = new Html5Qrcode('reader');
   scanner.start({facingMode:'environment'},
-    {fps:8, qrbox:{width:230,height:160}},
-    txt=>{ handleScan(txt.trim()); stopCam(); },
+    {fps:10, qrbox:{width:250,height:180}},
+    txt=>camDecode(txt.trim()),
     ()=>{}
   ).catch(err=>{
     document.getElementById('reader').innerHTML =
       '<div style="color:var(--amber);padding:26px 18px;font-size:13px;line-height:1.6">'+
       'Camera unavailable: '+esc(err)+'.<br><br>iOS requires this page to be served over '+
-      'HTTPS for camera access. Use a Bluetooth scanner (works in any mode), or host this '+
-      'file (e.g. via GitHub Pages / a local HTTPS server).</div>';
+      'HTTPS for camera access. Use a Bluetooth scanner (works in any mode), or open the '+
+      'hosted version over HTTPS.</div>';
   });
-};
+}
+function camDecode(code){
+  if(!code) return;
+  const now=Date.now();
+  if(code===camLast && now-camLastT<1500) return;   // same code still in frame
+  if(now-camLastT<500) return;                        // cooldown between reads
+  camLast=code; camLastT=now;
+
+  /* bin? */
+  if(LOCSET.has(code.toLowerCase())){
+    const exact = LOCATIONS.find(l=>l.toLowerCase()===code.toLowerCase());
+    if(camBinTarget){
+      if(camBinTarget==='from') fromBin=exact; else toBin=exact;
+      const which=camBinTarget.toUpperCase(); camBinTarget=null;
+      renderBins(); vibrate([30]);
+      document.getElementById('camTitle').textContent='Camera scan';
+      camStatus('ok', '✓ '+which+' set: '+exact+'  —  now scan items');
+    } else {
+      assignBin(exact);
+      camStatus('ok', '✓ Bin set: '+exact+'  —  now scan items');
+    }
+    return;
+  }
+  /* item */
+  const p = IDX[code] || IDX[code.toUpperCase()];
+  if(!p){ vibrate([80,60,80]); camStatus('err', '✗ Not in catalog: '+code+'  (add it from the main screen)'); return; }
+  const need = needs();
+  if(need){ vibrate([60]); camStatus('warn', '⚠ Set the '+need.toUpperCase()+' bin first'); return; }
+  addItem(p);
+  const units=rows.reduce((s,r)=>s+r.qty,0);
+  camStatus('ok', '✓ '+p.n+'   ·   '+rows.length+' items, '+units+' units');
+}
 function stopCam(){
   document.getElementById('camSheet').classList.remove('open');
   if(scanner){ scanner.stop().catch(()=>{}); scanner=null; }
+  camBinTarget=null;
   focusScan();
 }
+document.getElementById('btnCam').onclick = ()=>openCamera(null);
+document.querySelector('.scanwrap .sicon').onclick = ()=>openCamera(null);
+document.querySelectorAll('.binaim').forEach(b=>b.onclick = e=>{
+  e.stopPropagation();               // don't also open the manual picker
+  openCamera(b.dataset.t);
+});
 
 /* ══ EXPORT ══ */
 const HEADERS = ["Status","ImportTarget","Input Item","Date","Trans Type","Qty",
