@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1117">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Scan &amp; Go</title>
+<style>
+:root{
+  --bg:#0d1117; --panel:#161c26; --panel2:#1e2735; --line:#2a3548; --line-soft:#212b3a;
+  --txt:#eef2f7; --mut:#8a97ab; --mut2:#5f6b7d;
+  --accent:#d4693a; --accent2:#e8865c; --ok:#34d399; --amber:#f5a623; --danger:#e5484d; --blue:#5b9bf8;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.24);
+  --shadow-md:0 6px 20px -6px rgba(0,0,0,.45);
+  --shadow-lg:0 16px 48px -12px rgba(0,0,0,.6);
+  --radius:16px; --radius-sm:11px;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f4f5f7; --panel:#ffffff; --panel2:#f0f1f4; --line:#e2e5ea; --line-soft:#ebedf1;
+    --txt:#171b22; --mut:#68717e; --mut2:#98a1ad;
+    --accent:#c05a30; --accent2:#d4693a; --ok:#0f9d68; --amber:#b3720a; --danger:#d1373b; --blue:#2e6fd9;
+    --shadow-sm:0 1px 2px rgba(20,20,30,.06);
+    --shadow-md:0 6px 20px -8px rgba(20,20,30,.14);
+    --shadow-lg:0 20px 48px -16px rgba(20,20,30,.22);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--txt);display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  -webkit-font-smoothing:antialiased}
+svg{display:block}
+
+/* ── app header ────────────────────────────── */
+.appbar{display:flex;align-items:center;gap:10px;padding:14px 16px 8px}
+.appbar .mark{width:30px;height:30px;border-radius:9px;background:var(--panel2);
+  display:flex;align-items:center;justify-content:center;flex:none;border:1px solid var(--line-soft)}
+.appbar .mark svg{width:17px;height:17px}
+.appbar .title{font-size:15px;font-weight:800;letter-spacing:-.01em;flex:1}
+.appbar .catmeta{font-size:10.5px;color:var(--mut2);text-align:right;line-height:1.4;cursor:pointer}
+.appbar .catmeta b{color:var(--mut);font-weight:700}
+.appbar .catmeta.stale b{color:var(--amber)}
+.appbar .addbtn{width:30px;height:30px;border-radius:9px;background:var(--panel2);border:1px solid var(--line-soft);
+  color:var(--mut);display:flex;align-items:center;justify-content:center;flex:none}
+.appbar .addbtn svg{width:15px;height:15px}
+.newitembody{padding:2px 18px 6px}
+.newitembody label{display:block;font-size:10.5px;color:var(--mut2);text-transform:uppercase;
+  letter-spacing:.1em;font-weight:700;margin:12px 0 5px}
+.newitembody label:first-child{margin-top:0}
+.newitembody input{width:100%;padding:12px 13px;border-radius:var(--radius-sm);border:1px solid var(--line);
+  background:var(--panel2);color:var(--txt);font-size:15px;outline:none}
+.newitembody input:focus{border-color:var(--blue)}
+.newitembody .note{font-size:11.5px;color:var(--mut2);margin-top:8px;line-height:1.5}
+
+/* ── mode tabs ─────────────────────────────── */
+.tabs{display:flex;gap:6px;padding:4px 16px 8px}
+.tab{flex:1;text-align:center;padding:11px 4px;border-radius:12px;background:var(--panel);
+  border:1px solid var(--line);color:var(--mut);font-weight:700;font-size:11.5px;
+  text-transform:uppercase;letter-spacing:.09em;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.tab.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:var(--shadow-sm)}
+
+/* ── bin context ───────────────────────────── */
+.binbar{display:flex;gap:8px;padding:6px 16px}
+.binbox{flex:1;background:var(--panel);border:1.5px solid var(--line);border-radius:var(--radius-sm);
+  padding:9px 12px;min-height:56px;cursor:pointer;transition:border-color .18s;position:relative}
+.binbox .lbl{display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--mut2);
+  text-transform:uppercase;letter-spacing:.12em;font-weight:800}
+.binbox .lbl svg{width:10px;height:10px;opacity:.7}
+.binbox .val{font-size:14.5px;font-weight:700;margin-top:3px;line-height:1.25;word-break:break-word}
+.binbox.set{border-color:var(--ok)}
+.binbox.set .lbl{color:var(--ok)}
+.binbox.need{border-color:var(--amber);animation:need 1.4s ease-in-out infinite}
+@keyframes need{50%{border-color:var(--line)}}
+.binbox .val.empty{color:var(--mut2);font-weight:500;font-size:12.5px}
+.arrow{align-self:center;color:var(--mut2);flex:none}
+.arrow svg{width:15px;height:15px}
+
+/* ── scan field ────────────────────────────── */
+.scanwrap{padding:8px 16px 2px;position:relative}
+#scan{width:100%;padding:17px 44px 17px 16px;font-size:17px;border-radius:var(--radius-sm);
+  text-align:center;border:1.5px solid var(--line);background:var(--panel2);color:var(--txt);
+  outline:none;font-variant-numeric:tabular-nums;transition:border-color .15s,box-shadow .15s}
+#scan:focus{border-color:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb, var(--blue) 18%, transparent)}
+.scanwrap .sicon{position:absolute;right:30px;top:50%;transform:translateY(-50%);color:var(--mut2);pointer-events:none}
+.scanwrap .sicon svg{width:18px;height:18px}
+.hint{text-align:center;font-size:11px;color:var(--mut2);padding:6px 16px 0;min-height:15px}
+
+/* ── flash confirmation ───────────────────── */
+#flash{margin:8px 16px;border-radius:var(--radius-sm);padding:13px 14px;display:none;
+  border:1px solid;box-shadow:var(--shadow-sm)}
+#flash.ok{display:flex;align-items:center;gap:11px;background:color-mix(in srgb, var(--ok) 12%, var(--panel));border-color:color-mix(in srgb, var(--ok) 45%, var(--line))}
+#flash.warn{display:flex;align-items:center;gap:11px;background:color-mix(in srgb, var(--amber) 12%, var(--panel));border-color:color-mix(in srgb, var(--amber) 45%, var(--line))}
+#flash.err{display:flex;align-items:center;gap:11px;background:color-mix(in srgb, var(--danger) 13%, var(--panel));border-color:color-mix(in srgb, var(--danger) 45%, var(--line))}
+#flash .ficon{flex:none;width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center}
+#flash.ok .ficon{background:color-mix(in srgb, var(--ok) 22%, transparent);color:var(--ok)}
+#flash.warn .ficon{background:color-mix(in srgb, var(--amber) 22%, transparent);color:var(--amber)}
+#flash.err .ficon{background:color-mix(in srgb, var(--danger) 22%, transparent);color:var(--danger)}
+#flash .ficon svg{width:16px;height:16px}
+#flash .fbody{flex:1;min-width:0}
+#flash .fname{font-size:15px;font-weight:700;line-height:1.3}
+#flash .fsub{font-size:12px;color:var(--mut);margin-top:2px;line-height:1.4}
+#flash .fqty{font-size:26px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--ok);flex:none}
+@keyframes pop{0%{transform:scale(.97);opacity:.5}100%{transform:scale(1);opacity:1}}
+#flash.ok,#flash.warn,#flash.err{animation:pop .16s ease-out}
+
+/* ── session tape ──────────────────────────── */
+.tapehead{display:flex;justify-content:space-between;align-items:baseline;padding:12px 16px 5px}
+.tapehead .t1{font-size:10.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--mut2)}
+.tapehead .t2{font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums;font-weight:600}
+.clearall{width:26px;height:26px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);
+  color:var(--mut);display:flex;align-items:center;justify-content:center}
+.clearall svg{width:12px;height:12px}
+.clearall:disabled{opacity:.4}
+#tape{flex:1;overflow-y:auto;padding:0 16px 8px;-webkit-overflow-scrolling:touch}
+.row{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius-sm);padding:11px 12px;
+  margin-bottom:7px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow-sm)}
+.row.flagged{border-color:color-mix(in srgb, var(--amber) 50%, var(--line-soft))}
+.row .info{flex:1;min-width:0}
+.row .rn{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  display:flex;align-items:center;gap:6px}
+.row .rn .flag{flex:none;width:15px;height:15px;color:var(--amber)}
+.row .rm{font-size:11px;color:var(--mut);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .rq{display:flex;align-items:center;gap:7px}
+.row .rq button{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);
+  background:var(--panel2);color:var(--txt);font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.row .rq button svg{width:13px;height:13px}
+.row .rq .q{width:34px;text-align:center;font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;
+  color:var(--txt);background:transparent;border:1px solid transparent;border-radius:8px;padding:5px 2px;outline:none}
+.row .rq .q:focus{border-color:var(--blue);background:var(--panel2)}
+.row .del{width:32px;height:32px;border-radius:9px;border:none;background:transparent;
+  color:var(--mut2);display:flex;align-items:center;justify-content:center}
+.row .del svg{width:15px;height:15px}
+.tapempty{text-align:center;color:var(--mut2);padding:38px 24px;font-size:13px;line-height:1.7}
+.tapempty svg{width:34px;height:34px;margin:0 auto 12px;opacity:.5;display:block}
+
+/* ── bottom bar ────────────────────────────── */
+.bottom{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--line-soft);background:var(--bg)}
+.bottom button{border:none;border-radius:13px;font-weight:700;font-size:13.5px;padding:15px 10px;
+  display:flex;align-items:center;justify-content:center;gap:7px;transition:transform .1s,opacity .15s}
+.bottom button:active{transform:scale(.98)}
+.bottom button svg{width:16px;height:16px}
+#btnCam{flex:1;background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+#btnExport{flex:2;background:var(--ok);color:#04160e}
+#btnExport:disabled{background:var(--panel2);color:var(--mut2);opacity:.7}
+
+/* ── sheets (bin picker / export / catalog) ── */
+.sheet{position:fixed;inset:0;background:rgba(5,8,13,.6);backdrop-filter:blur(2px);display:none;z-index:20}
+.sheet.open{display:flex;flex-direction:column;justify-content:flex-end}
+.sheetin{background:var(--panel);border-radius:20px 20px 0 0;max-height:84%;
+  display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);box-shadow:var(--shadow-lg)}
+.sheetin::before{content:"";width:36px;height:4px;background:var(--line);border-radius:3px;
+  margin:9px auto 2px}
+.sheethead{padding:10px 18px 8px;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center}
+.sheethead .x{color:var(--mut);width:28px;height:28px;border-radius:9px;background:var(--panel2);
+  display:flex;align-items:center;justify-content:center;cursor:pointer}
+.sheethead .x svg{width:14px;height:14px}
+.sheetsearch{padding:0 16px 8px}
+.sheetsearch input{width:100%;padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--line);
+  background:var(--panel2);color:var(--txt);font-size:15px;outline:none}
+.sheetlist{overflow-y:auto;padding:0 14px 16px;-webkit-overflow-scrolling:touch}
+.binopt{padding:13px 12px;border-radius:10px;font-size:14px;font-weight:600;border-bottom:1px solid var(--line-soft)}
+.binopt:active{background:var(--panel2)}
+#camview{margin:0 16px 14px;border-radius:var(--radius-sm);overflow:hidden;background:#000;min-height:260px}
+.exportbody{padding:2px 18px 16px;font-size:13px;color:var(--mut);line-height:1.65}
+.exportbody b{color:var(--txt)}
+.exportbody .warnbox{margin-top:10px;padding:10px 12px;border-radius:10px;font-size:12px;line-height:1.5;
+  background:color-mix(in srgb, var(--amber) 12%, var(--panel));border:1px solid color-mix(in srgb, var(--amber) 40%, var(--line))}
+.exportbtns{display:flex;flex-direction:column;gap:8px;padding:0 18px 18px}
+.exportbtns button{padding:14px;border-radius:12px;border:none;font-weight:700;font-size:14px;
+  display:flex;align-items:center;justify-content:center;gap:8px}
+.exportbtns button svg{width:15px;height:15px}
+.eb1{background:var(--ok);color:#04160e}
+.eb2{background:var(--panel2);color:var(--txt);border:1px solid var(--line)!important}
+
+/* ── catalog sheet ─────────────────────────── */
+.catbody{padding:2px 18px 4px;font-size:13px;color:var(--mut);line-height:1.6}
+.catstat{display:flex;gap:10px;margin:10px 18px 14px}
+.catstat .c{flex:1;background:var(--panel2);border:1px solid var(--line-soft);border-radius:var(--radius-sm);
+  padding:10px 12px}
+.catstat .c .k{font-size:9.5px;color:var(--mut2);text-transform:uppercase;letter-spacing:.1em;font-weight:700}
+.catstat .c .v{font-size:17px;font-weight:800;margin-top:2px}
+.catactions{display:flex;flex-direction:column;gap:8px;padding:2px 18px 18px}
+.catactions button{padding:13px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);
+  color:var(--txt);font-weight:700;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:8px}
+.catactions button svg{width:15px;height:15px}
+.catactions .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+#fileInput{display:none}
+</style>
+</head>
+<body>
+
+<div class="appbar">
+  <div class="mark"></div>
+  <div class="title">Scan &amp; Go</div>
+  <button class="addbtn" id="btnAddItem" title="Add new item"></button>
+  <div class="catmeta" id="catMeta" onclick="openCatalog()"></div>
+</div>
+
+<div class="tabs">
+  <div class="tab on" data-m="receive">Receive</div>
+  <div class="tab" data-m="fba">Pick FBA</div>
+  <div class="tab" data-m="move">Move</div>
+</div>
+
+<div class="binbar">
+  <div class="binbox" id="fromBox">
+    <div class="lbl"> From</div><div class="val" id="fromVal"></div>
+  </div>
+  <div class="arrow"></div>
+  <div class="binbox" id="toBox">
+    <div class="lbl"> To</div><div class="val" id="toVal"></div>
+  </div>
+</div>
+
+<div class="scanwrap">
+  <input id="scan" type="text" inputmode="none" autocomplete="off" autocorrect="off"
+         autocapitalize="off" spellcheck="false" placeholder="Scan bin QR or item UPC">
+  <div class="sicon"></div>
+</div>
+<div class="hint" id="hint">Bluetooth scanner: just scan &#8226; tap field for manual entry</div>
+
+<div id="flash"></div>
+
+<div class="tapehead">
+  <span class="t1">This session</span>
+  <span style="display:flex;align-items:center;gap:10px">
+    <span class="t2" id="counts">0 items &#183; 0 units</span>
+    <button id="btnClearAll" class="clearall" title="Clear all items"></button>
+  </span>
+</div>
+<div id="tape"><div class="tapempty">Scan a bin label to set the location,<br>then start scanning item UPCs.</div></div>
+
+<div class="bottom">
+  <button id="btnCam">Camera</button>
+  <button id="btnExport" disabled>Export CSV (0)</button>
+</div>
+
+<!-- bin picker sheet -->
+<div class="sheet" id="binSheet">
+  <div class="sheetin">
+    <div class="sheethead"><span id="binTitle">Select bin</span><span class="x" onclick="closeBin()"></span></div>
+    <div class="sheetsearch"><input id="binSearch" placeholder="Search bins..."></div>
+    <div class="sheetlist" id="binList"></div>
+  </div>
+</div>
+
+<!-- camera sheet -->
+<div class="sheet" id="camSheet">
+  <div class="sheetin">
+    <div class="sheethead"><span>Camera scan</span><span class="x" onclick="stopCam()"></span></div>
+    <div id="camview"><div id="reader"></div></div>
+  </div>
+</div>
+
+<!-- export sheet -->
+<div class="sheet" id="expSheet">
+  <div class="sheetin">
+    <div class="sheethead"><span>Export session</span><span class="x" onclick="closeExp()"></span></div>
+    <div class="exportbody" id="expSummary"></div>
+    <div class="exportbtns">
+      <button class="eb1" onclick="downloadCSV()">Save CSV file</button>
+      <button class="eb2" onclick="copyCSV()">Copy CSV to clipboard</button>
+      <button class="eb2" onclick="clearSession()">Finish &amp; clear session</button>
+    </div>
+    <div id="newSkuBlock" style="display:none">
+      <div class="sheethead" style="padding-top:4px"><span style="font-size:14px">New SKUs pending Excel entry</span></div>
+      <div class="exportbody" id="newSkuSummary"></div>
+      <div class="exportbtns">
+        <button class="eb1 nb1" onclick="downloadNewSkuCSV()">Save New_SKUs CSV</button>
+        <button class="eb2 nb2" onclick="copyNewSkuCSV()">Copy New_SKUs CSV</button>
+        <button class="eb2 nb3" onclick="markNewSkusDone()">Added to Excel &mdash; clear this list</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- catalog sheet -->
+<div class="sheet" id="catSheet">
+  <div class="sheetin">
+    <div class="sheethead"><span>Catalog</span><span class="x" onclick="closeCatalog()"></span></div>
+    <div class="catbody">Loaded from a snapshot embedded when this file was built. Refresh it any time
+      by loading the latest <b>Data_master.csv</b> from <b>Tools\</b> &mdash; it's saved on this device
+      for next time, no rebuild needed.</div>
+    <div class="catstat">
+      <div class="c"><div class="k">Items</div><div class="v" id="catCount">&mdash;</div></div>
+      <div class="c"><div class="k">Source</div><div class="v" id="catSource" style="font-size:13px">&mdash;</div></div>
+      <div class="c"><div class="k">Loaded</div><div class="v" id="catAge" style="font-size:13px">&mdash;</div></div>
+    </div>
+    <div class="catstat">
+      <div class="c"><div class="k">Added on this device</div><div class="v" id="catLocal" style="font-size:13px">&mdash;</div></div>
+    </div>
+    <div class="catactions">
+      <button class="primary" onclick="document.getElementById('fileInput').click()">Load Data_master.csv&hellip;</button>
+      <button onclick="resetCatalog()">Use built-in snapshot</button>
+      <button onclick="clearLocalAdditions()">Clear locally-added items</button>
+    </div>
+    <input type="file" id="fileInput" accept=".csv">
+  </div>
+</div>
+
+<!-- add new item sheet -->
+<div class="sheet" id="newItemSheet">
+  <div class="sheetin">
+    <div class="sheethead"><span>Add new item</span><span class="x" onclick="closeAddItem()"></span></div>
+    <div class="newitembody">
+      <label>Product name (optional)</label>
+      <input id="niName" placeholder="e.g. LEGO City Red Truck">
+      <label>UPC</label>
+      <input id="niUpc" inputmode="numeric" pattern="[0-9]*" placeholder="barcode number">
+      <label>Reference # / Set #</label>
+      <input id="niRef" placeholder="e.g. 60448">
+      <div class="note">Need at least one of UPC or Ref #. This adds the item to your device's
+        catalog right away so you can log it into this session immediately — it still needs to
+        go into <b>Data_master.csv</b> for good; the export screen will give you a ready-to-paste
+        row for the <b>New_SKUs</b> sheet.</div>
+    </div>
+    <div class="exportbtns">
+      <button class="eb1" onclick="confirmAddItem()">Add &amp; log now</button>
+      <button class="eb2" onclick="closeAddItem()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+/* ══ ICONS (inline SVG, currentColor) ══ */
+const ICONS = {
+  scan:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V4a1 1 0 0 1 1-1h3M21 7V4a1 1 0 0 0-1-1h-3M3 17v3a1 1 0 0 0 1 1h3M21 17v3a1 1 0 0 1-1 1h-3M3 12h18"/></svg>',
+  from:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="8"/></svg>',
+  to:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 3 20h18z"/></svg>',
+  arrow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  cam:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
+  export:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  dl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
+  copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  empty:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V4a1 1 0 0 1 1-1h3M21 7V4a1 1 0 0 0-1-1h-3M3 17v3a1 1 0 0 0 1 1h3M21 17v3a1 1 0 0 1-1 1h-3M7 12h1M12 12h1M16 12h1"/></svg>',
+  upload:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>',
+  reset:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>',
+  warn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+  ok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  err:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  box:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12l8.73-5.04M12 22.08V12"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
+};
+document.querySelectorAll('.mark').forEach(e=>e.innerHTML=ICONS.box);
+document.getElementById('fromBox').querySelector('.lbl').innerHTML = ICONS.from+' From';
+document.getElementById('toBox').querySelector('.lbl').innerHTML = ICONS.to+' To';
+document.querySelector('.arrow').innerHTML = ICONS.arrow;
+document.querySelector('.scanwrap .sicon').innerHTML = ICONS.scan;
+document.querySelector('.tapempty').innerHTML = ICONS.empty + document.querySelector('.tapempty').innerHTML;
+document.getElementById('btnCam').innerHTML = ICONS.cam+'Camera';
+document.getElementById('btnExport').innerHTML = ICONS.export+'Export CSV (0)';
+document.querySelectorAll('.sheethead .x').forEach(e=>e.innerHTML=ICONS.x);
+document.querySelector('#expSheet .eb1').innerHTML = ICONS.dl+'Save CSV file';
+document.querySelectorAll('#expSheet .eb2')[0].innerHTML = ICONS.copy+'Copy CSV to clipboard';
+document.querySelectorAll('#expSheet .eb2')[1].innerHTML = ICONS.check+'Finish &amp; clear session';
+document.querySelector('.nb1').innerHTML = ICONS.dl+'Save New_SKUs CSV';
+document.querySelector('.nb2').innerHTML = ICONS.copy+'Copy New_SKUs CSV';
+document.querySelector('.nb3').innerHTML = ICONS.check+'Added to Excel &mdash; clear this list';
+document.querySelector('.catactions .primary').innerHTML = ICONS.upload+'Load Data_master.csv&hellip;';
+document.getElementById('btnAddItem').innerHTML = ICONS.plus;
+document.querySelector('#newItemSheet .eb1').innerHTML = ICONS.plus+'Add &amp; log now';
+document.querySelector('#newItemSheet .eb2').innerHTML = ICONS.x+'Cancel';
+[...document.querySelectorAll('.catactions button')].forEach(b=>{
+  if(b.classList.contains('primary')) return;
+  const t = b.textContent.trim();
+  if(t.startsWith('Use built-in')) b.innerHTML = ICONS.reset+t;
+  else if(t.startsWith('Clear locally')) b.innerHTML = ICONS.trash+t;
+});
+
+/* ══ DATA (embedded snapshot — refreshable below) ══ */
+const SNAPSHOT_DATE = "2026-06-27T00:00:00Z";
+const CATALOG = [];  // shell build: catalog is never published — load Data_master.csv on-device
+const LOCATIONS = [];
+
+/* ══ CATALOG: prefer a locally-refreshed copy over the embedded snapshot ══ */
+let ACTIVE_CATALOG = CATALOG, CATALOG_SOURCE = 'snapshot', CATALOG_LOADED_AT = SNAPSHOT_DATE;
+try{
+  const saved = localStorage.getItem('scanpwa_catalog');
+  if(saved){
+    const parsed = JSON.parse(saved);
+    if(parsed && parsed.items && parsed.items.length){
+      ACTIVE_CATALOG = parsed.items; CATALOG_SOURCE = 'refreshed'; CATALOG_LOADED_AT = parsed.loadedAt;
+    }
+  }
+}catch(e){}
+
+/* Items added in the field via "+ Add new item" live in their OWN persisted
+   layer, separate from the base catalog (snapshot or refreshed CSV). This way
+   resetting/refreshing the base catalog never loses something you scanned in
+   at the shelf before it made it into Excel. Base wins on a key collision
+   (buildIndex's "first wins" + base-first ordering below) — once the real
+   Data_master.csv catches up with an item, the official record takes over. */
+let LOCAL_ADDITIONS = [];
+try{ LOCAL_ADDITIONS = JSON.parse(localStorage.getItem('scanpwa_local_additions')||'[]'); }catch(e){}
+function saveLocalAdditions(){ localStorage.setItem('scanpwa_local_additions', JSON.stringify(LOCAL_ADDITIONS)); }
+
+/* New items are ALSO queued here until you've pasted them into the New_SKUs
+   sheet in Excel and run AddNewSKUs — independent of the scan session, so
+   backgrounding/reloading the app never loses track of what still needs to
+   go into the workbook. Cleared only by an explicit "done in Excel" tap. */
+let NEW_SKUS = [];
+try{ NEW_SKUS = JSON.parse(localStorage.getItem('scanpwa_new_skus')||'[]'); }catch(e){}
+function saveNewSkus(){ localStorage.setItem('scanpwa_new_skus', JSON.stringify(NEW_SKUS)); }
+
+function buildIndex(cat){
+  const idx = {};
+  for(const p of cat){
+    if(p.u) idx[p.u] = p;
+    if(p.r && !idx[p.r]) idx[p.r] = p;
+    if(p.a && !idx[p.a.toUpperCase()]) idx[p.a.toUpperCase()] = p;
+  }
+  return idx;
+}
+let IDX;
+function rebuildIndex(){ IDX = buildIndex([...ACTIVE_CATALOG, ...LOCAL_ADDITIONS]); }
+rebuildIndex();
+const LOCSET = new Set(LOCATIONS.map(l=>l.toLowerCase()));
+/* Bins can also be learned from the catalog CSV's Bin Location column — this is
+   what lets the hosted shell ship with no embedded data yet still recognize
+   every bin, and it picks up renamed/new bins without a redeploy. */
+function unionBins(items){
+  for(const p of items){
+    if(p.b && !LOCSET.has(p.b.toLowerCase())){
+      LOCATIONS.push(p.b); LOCSET.add(p.b.toLowerCase());
+    }
+  }
+}
+if(CATALOG_SOURCE==='refreshed') unionBins(ACTIVE_CATALOG);
+
+function fmtAge(iso){
+  if(!iso) return 'unknown';
+  const d = Math.floor((Date.now()-new Date(iso).getTime())/86400000);
+  if(d<=0) return 'today'; if(d===1) return '1 day ago'; return d+' days ago';
+}
+function renderCatMeta(){
+  const el = document.getElementById('catMeta');
+  const age = Math.floor((Date.now()-new Date(CATALOG_LOADED_AT).getTime())/86400000);
+  el.classList.toggle('stale', age>14);
+  const pending = NEW_SKUS.length ? '<br>'+NEW_SKUS.length+' new pending' : '';
+  el.innerHTML = ACTIVE_CATALOG.length+' items<br><b>'+fmtAge(CATALOG_LOADED_AT)+'</b>'+pending;
+}
+renderCatMeta();
+
+function openCatalog(){
+  document.getElementById('catCount').textContent = ACTIVE_CATALOG.length.toLocaleString();
+  document.getElementById('catSource').textContent = CATALOG_SOURCE==='refreshed' ? 'Data_master.csv' : 'built-in';
+  document.getElementById('catAge').textContent = fmtAge(CATALOG_LOADED_AT);
+  document.getElementById('catLocal').textContent = LOCAL_ADDITIONS.length
+    ? LOCAL_ADDITIONS.length+' added here' : 'none';
+  document.getElementById('catSheet').classList.add('open');
+}
+function clearLocalAdditions(){
+  if(!LOCAL_ADDITIONS.length){ return; }
+  if(!confirm('Remove '+LOCAL_ADDITIONS.length+' locally-added item(s) from this device\'s catalog? '+
+    'Only do this once they are confirmed added in Data_master.csv — this does not touch Excel.')) return;
+  LOCAL_ADDITIONS = []; saveLocalAdditions(); rebuildIndex(); renderCatMeta();
+  document.getElementById('catLocal').textContent = 'none';
+}
+
+/* ══ ADD NEW ITEM (in the field — UPC/Ref# only, no Excel round-trip needed first) ══ */
+function openAddItem(prefillUpc){
+  document.getElementById('niName').value = '';
+  document.getElementById('niUpc').value = prefillUpc || '';
+  document.getElementById('niRef').value = '';
+  document.getElementById('newItemSheet').classList.add('open');
+  const target = prefillUpc ? 'niRef' : 'niName';
+  setTimeout(()=>document.getElementById(target).focus(), 60);
+}
+function closeAddItem(){ document.getElementById('newItemSheet').classList.remove('open'); focusScan(); }
+function confirmAddItem(){
+  const name = document.getElementById('niName').value.trim();
+  const upc = document.getElementById('niUpc').value.trim();
+  const ref = document.getElementById('niRef').value.trim();
+  if(!upc && !ref){ alert('Enter at least a UPC or a Reference #.'); return; }
+  if(upc && IDX[upc]){ alert('That UPC is already in the catalog: '+IDX[upc].n); return; }
+  if(ref && IDX[ref]){ alert('That Reference # is already in the catalog: '+IDX[ref].n); return; }
+  const item = {n: name||'(unnamed — add name in Excel)', u: upc, r: ref, a: ''};
+  LOCAL_ADDITIONS.push(item); saveLocalAdditions();
+  NEW_SKUS.push({name, upc, ref, addedAt: new Date().toISOString()}); saveNewSkus();
+  rebuildIndex(); renderCatMeta();
+  closeAddItem();
+  const need = needs();
+  if(need){
+    flash('warn', item.n, 'Added to catalog. Set the '+need.toUpperCase()+' bin, then scan it to log it.', '');
+  } else {
+    addItem(item);
+  }
+}
+document.getElementById('btnAddItem').onclick = ()=>openAddItem('');
+function closeCatalog(){ document.getElementById('catSheet').classList.remove('open'); focusScan(); }
+
+/* Parse Data_master.csv exactly per its known 8-column export schema
+   (Category, Product Name, Product Reference#, UPC, ASIN, HasVariants, Avg Cost, Bin Location) */
+function parseCatalogCSV(text){
+  const rows = [];
+  let i=0, field='', row=[], inQ=false;
+  const pushField=()=>{row.push(field);field=''};
+  const pushRow=()=>{pushField();rows.push(row);row=[]};
+  while(i<text.length){
+    const c=text[i];
+    if(inQ){
+      if(c==='"'){ if(text[i+1]==='"'){field+='"';i+=2;continue} inQ=false;i++;continue }
+      field+=c;i++;continue;
+    }
+    if(c==='"'){inQ=true;i++;continue}
+    if(c===','){pushField();i++;continue}
+    if(c==='\r'){i++;continue}
+    if(c==='\n'){pushRow();i++;continue}
+    field+=c;i++;
+  }
+  if(field.length||row.length) pushRow();
+  if(!rows.length) return [];
+  const hdr = rows[0].map(h=>h.trim().toLowerCase());
+  const ci = name => hdr.indexOf(name);
+  const cName=ci('product name'), cRef=ci('product reference#'), cUpc=ci('upc'), cAsin=ci('asin'), cBin=ci('bin location');
+  const out = [];
+  for(let r=1;r<rows.length;r++){
+    const row2 = rows[r];
+    if(!row2 || row2.every(v=>!v || !v.trim())) continue;
+    out.push({ n: (row2[cName]||'').trim(), r: (row2[cRef]||'').trim(),
+               u: (row2[cUpc]||'').trim(), a: (row2[cAsin]||'').trim(),
+               b: cBin>=0 ? (row2[cBin]||'').trim() : '' });
+  }
+  return out;
+}
+document.getElementById('fileInput').addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = ev=>{
+    try{
+      const items = parseCatalogCSV(ev.target.result);
+      if(!items.length){ alert('No rows found in that file.'); return; }
+      const loadedAt = new Date().toISOString();
+      localStorage.setItem('scanpwa_catalog', JSON.stringify({items, loadedAt}));
+      ACTIVE_CATALOG = items; CATALOG_SOURCE='refreshed'; CATALOG_LOADED_AT=loadedAt;
+      rebuildIndex(); unionBins(items); renderCatMeta();
+      document.getElementById('catCount').textContent = items.length.toLocaleString();
+      document.getElementById('catSource').textContent = 'Data_master.csv';
+      document.getElementById('catAge').textContent = 'today';
+      flash('ok', 'Catalog refreshed', items.length+' items loaded from '+f.name, '');
+    }catch(err){ alert('Could not read that CSV: '+err); }
+  };
+  rd.readAsText(f);
+  e.target.value='';
+});
+function resetCatalog(){
+  localStorage.removeItem('scanpwa_catalog');
+  ACTIVE_CATALOG = CATALOG; CATALOG_SOURCE='snapshot'; CATALOG_LOADED_AT=SNAPSHOT_DATE;
+  rebuildIndex(); renderCatMeta();
+  document.getElementById('catCount').textContent = ACTIVE_CATALOG.length.toLocaleString();
+  document.getElementById('catSource').textContent = 'built-in';
+  document.getElementById('catAge').textContent = fmtAge(SNAPSHOT_DATE);
+}
+
+/* ══ STATE ══ */
+let mode = 'receive';
+let fromBin = 'Receiving';
+let toBin = '';
+let rows = [];
+let binTarget = null;
+
+/* ══ MODE CONFIG ══ */
+const MODES = {
+  receive: {type:'Move',       fromLocked:false, fromDefault:'Receiving',
+            scanSets:'to',   label:'Scan destination bin, then items'},
+  fba:     {type:'Send to FBA',fromLocked:false, fromDefault:'',
+            scanSets:'from', label:'Scan shelf bin, then items to pull'},
+  move:    {type:'Move',       fromLocked:false, fromDefault:'',
+            scanSets:'from', label:'Scan FROM bin, items, then TO bin'}
+};
+
+function setMode(m){
+  mode = m;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on', t.dataset.m===m));
+  fromBin = MODES[m].fromDefault;
+  toBin = (m==='fba') ? (LOCATIONS.find(l=>/fba/i.test(l))||'') : '';
+  renderBins(); focusScan();
+  hintMsg(MODES[m].label);
+}
+
+function renderBins(){
+  const fv=document.getElementById('fromVal'), tv=document.getElementById('toVal');
+  const fb=document.getElementById('fromBox'), tb=document.getElementById('toBox');
+  fv.textContent = fromBin || 'tap to set'; fv.className='val'+(fromBin?'':' empty');
+  tv.textContent = toBin || 'tap to set';   tv.className='val'+(toBin?'':' empty');
+  fb.className='binbox'+(fromBin?' set':(needs()==='from'?' need':''));
+  tb.className='binbox'+(toBin?' set':(needs()==='to'?' need':''));
+}
+function needs(){ if(!fromBin) return 'from'; if(!toBin) return 'to'; return null; }
+
+/* ══ SCAN HANDLING ══ */
+const scanEl = document.getElementById('scan');
+scanEl.addEventListener('keydown', e=>{
+  if(e.key==='Enter'){ e.preventDefault(); handleScan(scanEl.value.trim()); scanEl.value=''; }
+});
+scanEl.addEventListener('click', ()=>{ scanEl.setAttribute('inputmode','text'); });
+
+function focusScan(){ scanEl.focus({preventScroll:true}); }
+document.addEventListener('touchend', e=>{
+  if(!e.target.closest('.sheet') && !e.target.closest('button') &&
+     !e.target.closest('.binbox') && !e.target.closest('.tab') &&
+     !e.target.closest('.row') && !e.target.closest('.catmeta')) focusScan();
+});
+
+function handleScan(code){
+  if(!code) return;
+  if(LOCSET.has(code.toLowerCase())){
+    const exact = LOCATIONS.find(l=>l.toLowerCase()===code.toLowerCase());
+    assignBin(exact);
+    return;
+  }
+  const p = IDX[code] || IDX[code.toUpperCase()];
+  if(!p){
+    vibrate([80,60,80]);
+    openAddItem(code);
+    return;
+  }
+  const need = needs();
+  if(need){
+    flash('warn', p.n, 'Set the '+need.toUpperCase()+' bin first — scan its QR label', '');
+    vibrate([60]);
+    return;
+  }
+  addItem(p);
+}
+
+function assignBin(name){
+  const cfg = MODES[mode];
+  if(mode==='move'){
+    if(!fromBin){ fromBin=name; hintMsg('FROM set — scan items, then scan TO bin when done'); }
+    else if(!toBin){ toBin=name; hintMsg('TO set — items will move '+fromBin+' → '+toBin); }
+    else { toBin=name; hintMsg('TO changed to '+name); }
+  } else if(cfg.scanSets==='to'){ toBin=name; hintMsg('Destination: '+name+' — scan items'); }
+  else { fromBin=name; hintMsg('Source: '+name+' — scan items'); }
+  renderBins(); flash('ok', name, 'Bin set', '', 'box'); vibrate([30]);
+}
+
+/* Input Item on export must be UPC or set#/Ref (per the Cowork spec) — ASIN is
+   accepted for SCANNING (matches the workbook's Data.ASIN column) but flagged
+   distinctly since it is not a guaranteed valid Input Item for ImportStaging. */
+let ROWSEQ = 0;  // stable per-row id — row identity survives list reordering/removal
+function addItem(p){
+  const key = p.u||p.r||p.a;
+  const exportKey = p.u||p.r||'';
+  const asinOnly = !p.u && !p.r && !!p.a;
+  const ex = rows.find(r=>r.key===key && r.from===fromBin && r.to===toBin);
+  if(ex){ ex.qty++; }
+  else rows.push({id:++ROWSEQ, key, name:p.n, upc:exportKey, qty:1, from:fromBin, to:toBin, type:MODES[mode].type, asinOnly});
+  const q = ex?ex.qty:1;
+  if(asinOnly) flash('warn', p.n, 'No UPC/Ref# — only an ASIN. Verify manually before import.', q);
+  else flash('ok', p.n, (fromBin||'—')+' → '+(toBin||'—'), q);
+  vibrate([25]); renderTape();
+}
+
+/* ══ UI RENDER ══ */
+function flash(kind, name, sub, qty){
+  const f = document.getElementById('flash');
+  f.className = kind;
+  const icon = kind==='ok'?ICONS.ok:kind==='warn'?ICONS.warn:ICONS.err;
+  f.innerHTML = '<div class="ficon">'+icon+'</div><div class="fbody">'+
+    '<div class="fname">'+esc(name)+'</div><div class="fsub">'+esc(sub)+'</div></div>'+
+    (qty!==''?'<div class="fqty">&#215;'+qty+'</div>':'');
+}
+function esc(s){return (s+'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function hintMsg(t){ document.getElementById('hint').textContent = t; }
+function vibrate(p){ if(navigator.vibrate) navigator.vibrate(p); }
+
+function renderTape(){
+  const tape = document.getElementById('tape');
+  if(!rows.length){
+    tape.innerHTML = '<div class="tapempty">'+ICONS.empty+'Scan a bin label to set the location,<br>then start scanning item UPCs.</div>';
+  } else {
+    tape.innerHTML = rows.map(r=>
+      '<div class="row'+(r.asinOnly?' flagged':'')+'" data-id="'+r.id+'">'+
+        '<div class="info"><div class="rn">'+(r.asinOnly?'<span class="flag">'+ICONS.warn+'</span>':'')+esc(r.name)+'</div>'+
+        '<div class="rm">'+esc(r.type)+' &#183; '+esc(r.from)+' &#8594; '+esc(r.to)+'</div></div>'+
+        '<div class="rq"><button data-act="dec" data-id="'+r.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"/></svg></button>'+
+        '<input class="q" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-id="'+r.id+'" value="'+r.qty+'">'+
+        '<button data-act="inc" data-id="'+r.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>'+
+        '<button class="del" data-act="del" data-id="'+r.id+'">'+ICONS.x+'</button>'+
+      '</div>').join('');
+  }
+  updateHeader();
+}
+function updateHeader(){
+  const units = rows.reduce((s,r)=>s+r.qty,0);
+  document.getElementById('counts').textContent = rows.length+' items · '+units+' units';
+  const be = document.getElementById('btnExport');
+  be.disabled = !rows.length && !NEW_SKUS.length;
+  be.innerHTML = ICONS.export+(rows.length?'Export CSV ('+units+')':(NEW_SKUS.length?'Export New SKUs ('+NEW_SKUS.length+')':'Export CSV (0)'));
+  document.getElementById('btnClearAll').disabled = !rows.length;
+}
+document.getElementById('btnClearAll').innerHTML = ICONS.trash;
+document.getElementById('btnClearAll').onclick = ()=>{
+  if(!rows.length) return;
+  if(!confirm('Clear all '+rows.length+' scanned line(s)? This does not affect items you\'ve already added to the catalog.')) return;
+  rows=[]; renderTape(); focusScan();
+};
+/* ══ ROW INTERACTIONS — all delegated on #tape, all keyed by stable row id ══
+   Why this shape (a real field bug): with inline onclick + positional indexes,
+   tapping −/+ while the qty keypad was open fired the input's blur (which
+   REBUILT the list, destroying the tapped button mid-tap) and then a click on
+   the detached button against a stale index — dead buttons, wrong-row edits,
+   or a thrown error that froze qty entry. Fixes baked in below:
+   1. pointerdown + preventDefault → a button press never blurs/dismisses the
+      keypad, and never generates a follow-up click (no double-fire).
+   2. Delegation → events from detached nodes can't reach #tape, so a mid-
+      rebuild tap is simply ignored instead of acting on the wrong row.
+   3. Row id lookup → no positional indexes anywhere; a missing id is a no-op. */
+const tapeEl = document.getElementById('tape');
+const rowById = id => rows.find(r=>r.id===+id);
+
+tapeEl.addEventListener('pointerdown', e=>{
+  const btn = e.target.closest('[data-act]');
+  if(!btn) return;
+  e.preventDefault();                       // keep focus (and iOS keypad) where it is
+  const idx = rows.findIndex(r=>r.id===+btn.dataset.id);
+  if(idx<0) return;                         // row already gone — ignore stale tap
+  const act = btn.dataset.act;
+  if(act==='del'){
+    rows.splice(idx,1); renderTape(); return;
+  }
+  rows[idx].qty += (act==='inc'?1:-1);
+  if(rows[idx].qty<=0){
+    const gone = rows[idx]; rows.splice(idx,1);
+    flash('warn', gone.name, 'Removed from session', '');
+    renderTape(); return;
+  }
+  /* in-place sync: never rebuild the list on ± — a focused qty input (this
+     row or any other) keeps its focus and keyboard */
+  const inp = tapeEl.querySelector('.q[data-id="'+rows[idx].id+'"]');
+  if(inp) inp.value = rows[idx].qty;
+  const r = rows[idx];
+  flash('ok', r.name, (r.from||'—')+' → '+(r.to||'—'), r.qty);
+  vibrate([15]); updateHeader();
+});
+
+tapeEl.addEventListener('input', e=>{
+  if(!e.target.classList.contains('q')) return;
+  const digits = e.target.value.replace(/[^0-9]/g,'');
+  if(digits !== e.target.value) e.target.value = digits;
+  const row = rowById(e.target.dataset.id);
+  const n = parseInt(digits, 10);
+  if(row && !isNaN(n)){ row.qty = n; updateHeader(); }
+});
+tapeEl.addEventListener('focusout', e=>{
+  if(!e.target.classList.contains('q')) return;
+  const idx = rows.findIndex(r=>r.id===+e.target.dataset.id);
+  if(idx<0) return;                         // row deleted while its input was focused
+  const n = parseInt(e.target.value, 10);
+  if(isNaN(n) || n<=0){
+    const gone = rows[idx];
+    rows.splice(idx,1);
+    flash('warn', gone.name, 'Removed from session', '');
+  } else {
+    rows[idx].qty = n;
+    const r = rows[idx];
+    flash('ok', r.name, (r.from||'—')+' → '+(r.to||'—'), r.qty);
+  }
+  /* Deliberately NOT calling focusScan() here: doing so right as the numeric
+     keypad dismisses caused the very next tap on +/- to land unreliably.
+     The touchend listener refocuses the scan field on the next outside tap. */
+  renderTape();
+});
+tapeEl.addEventListener('keydown', e=>{
+  if(e.target.classList.contains('q') && e.key==='Enter'){ e.preventDefault(); e.target.blur(); }
+});
+tapeEl.addEventListener('focusin', e=>{
+  if(e.target.classList.contains('q')) e.target.select();
+});
+
+/* ══ BIN PICKER ══ */
+document.getElementById('fromBox').onclick = ()=>openBin('from');
+document.getElementById('toBox').onclick   = ()=>openBin('to');
+function openBin(which){
+  binTarget = which;
+  document.getElementById('binTitle').textContent = 'Select '+which.toUpperCase()+' bin';
+  document.getElementById('binSearch').value='';
+  renderBinList('');
+  document.getElementById('binSheet').classList.add('open');
+}
+function closeBin(){ document.getElementById('binSheet').classList.remove('open'); focusScan(); }
+document.getElementById('binSearch').addEventListener('input', e=>renderBinList(e.target.value));
+function renderBinList(q){
+  const list = LOCATIONS.filter(l=>l.toLowerCase().includes(q.toLowerCase()));
+  document.getElementById('binList').innerHTML =
+    list.map(l=>'<div class="binopt" onclick="pickBin(\''+l.replace(/'/g,"\\'")+'\')">'+esc(l)+'</div>').join('');
+}
+function pickBin(name){
+  if(binTarget==='from') fromBin=name; else toBin=name;
+  renderBins(); closeBin();
+}
+
+/* ══ CAMERA ══ */
+let scanner=null;
+document.getElementById('btnCam').onclick = ()=>{
+  document.getElementById('camSheet').classList.add('open');
+  scanner = new Html5Qrcode('reader');
+  scanner.start({facingMode:'environment'},
+    {fps:8, qrbox:{width:230,height:160}},
+    txt=>{ handleScan(txt.trim()); stopCam(); },
+    ()=>{}
+  ).catch(err=>{
+    document.getElementById('reader').innerHTML =
+      '<div style="color:var(--amber);padding:26px 18px;font-size:13px;line-height:1.6">'+
+      'Camera unavailable: '+esc(err)+'.<br><br>iOS requires this page to be served over '+
+      'HTTPS for camera access. Use a Bluetooth scanner (works in any mode), or host this '+
+      'file (e.g. via GitHub Pages / a local HTTPS server).</div>';
+  });
+};
+function stopCam(){
+  document.getElementById('camSheet').classList.remove('open');
+  if(scanner){ scanner.stop().catch(()=>{}); scanner=null; }
+  focusScan();
+}
+
+/* ══ EXPORT ══ */
+const HEADERS = ["Status","ImportTarget","Input Item","Date","Trans Type","Qty",
+"From Loc","To Loc","Sold Price","Invoice/Order #","Store","Retail$","US$",
+"Refund Qty","Shipping","Total Cost with Tax","Tax","GST","PST","US Tax",
+"Notes","Rewards","Emails/Accts","PDF Reference"];
+
+/* Prevent Excel/Sheets from executing a leading =,+,-,@ as a formula when this
+   CSV is opened or pasted (CSV-injection hardening — mirrors the same fix
+   recommended for ExportDataMaster on the Excel side). */
+function csvSafe(v){
+  const s = String(v==null?'':v);
+  return /^[=+\-@]/.test(s) ? "'"+s : s;
+}
+function buildCSV(){
+  const today = new Date().toISOString().slice(0,10);
+  const lines = [HEADERS.join(',')];
+  for(const r of rows){
+    const notes = r.asinOnly ? 'Scanner batch; NO UPC/REF - matched by ASIN, verify Input Item' : 'Scanner batch';
+    const rec = {"ImportTarget":"Transaction","Input Item":r.upc,"Date":today,
+      "Trans Type":r.type,"Qty":r.qty,"From Loc":r.from,"To Loc":r.to,
+      "Notes":notes};
+    lines.push(HEADERS.map(h=>{
+      let v = csvSafe(rec[h]===undefined?'':rec[h]);
+      return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;
+    }).join(','));
+  }
+  return lines.join('\r\n');
+}
+const NEWSKU_HEADERS = ["Status","Category","Product Name","Product Reference#","UPC","ASIN","HasVariants","Bin Location"];
+function buildNewSkuCSV(){
+  const lines = [NEWSKU_HEADERS.join(',')];
+  for(const s of NEW_SKUS){
+    const rec = {"Product Name": s.name, "Product Reference#": s.ref, "UPC": s.upc};
+    lines.push(NEWSKU_HEADERS.map(h=>{
+      let v = csvSafe(rec[h]===undefined?'':rec[h]);
+      return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;
+    }).join(','));
+  }
+  return lines.join('\r\n');
+}
+function downloadNewSkuCSV(){
+  const blob = new Blob([buildNewSkuCSV()], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'new_skus_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+async function copyNewSkuCSV(){
+  try{ await navigator.clipboard.writeText(buildNewSkuCSV()); alert('New_SKUs CSV copied. Paste into the New_SKUs sheet, review, then run AddNewSKUs.'); }
+  catch(e){ alert('Copy failed: '+e); }
+}
+function markNewSkusDone(){
+  if(!confirm('Clear the '+NEW_SKUS.length+' pending New SKU row(s)? Only do this after you\'ve pasted '+
+    'them into the New_SKUs sheet and run AddNewSKUs.')) return;
+  NEW_SKUS = []; saveNewSkus(); renderCatMeta();
+  document.getElementById('newSkuBlock').style.display = 'none';
+  updateHeader();
+}
+
+document.getElementById('btnExport').onclick = ()=>{
+  const units = rows.reduce((s,r)=>s+r.qty,0);
+  const flagged = rows.filter(r=>r.asinOnly).length;
+  document.getElementById('expSummary').innerHTML = rows.length ?
+    ('<b>'+rows.length+'</b> line(s), <b>'+units+'</b> units.<br>'+
+    'Save the CSV into <b>Staging\\</b>, then paste its rows into the Staging sheet '+
+    'and run <b>ImportStaging</b>.'+
+    (flagged?'<div class="warnbox">'+ICONS.warn+' <b>'+flagged+'</b> line(s) matched by ASIN only (no UPC/Ref#) '+
+     'and have a blank Input Item — ImportStaging will silently skip them. Add a UPC or set # on the '+
+     'New_SKUs sheet first, or fix the Input Item cell by hand before importing.</div>':''))
+    : 'No scanned lines this session.';
+  const nb = document.getElementById('newSkuBlock');
+  if(NEW_SKUS.length){
+    nb.style.display = '';
+    document.getElementById('newSkuSummary').innerHTML =
+      '<b>'+NEW_SKUS.length+'</b> item(s) added in the field, not yet in Excel.<br>'+
+      'Save/copy this separately and paste into the <b>New_SKUs</b> sheet, then run <b>AddNewSKUs</b>.';
+  } else nb.style.display = 'none';
+  document.getElementById('expSheet').classList.add('open');
+};
+function closeExp(){ document.getElementById('expSheet').classList.remove('open'); focusScan(); }
+function downloadCSV(){
+  const blob = new Blob([buildCSV()], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'scan_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+async function copyCSV(){
+  try{ await navigator.clipboard.writeText(buildCSV()); alert('CSV copied. Paste into the Staging sheet.'); }
+  catch(e){ alert('Copy failed: '+e); }
+}
+function clearSession(){
+  if(rows.length && !confirm('Clear all '+rows.length+' scanned lines?')) return;
+  rows=[]; renderTape(); closeExp();
+  if(mode!=='receive'){ fromBin=MODES[mode].fromDefault; }
+  renderBins(); hintMsg(MODES[mode].label);
+}
+
+/* ══ PWA install / offline shell ══ */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+/* ══ init ══ */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>setMode(t.dataset.m));
+setMode('receive');
+renderTape();
+/* First run of the hosted shell: no embedded catalog and nothing loaded yet —
+   open the catalog sheet so the one required step is unmissable. */
+if(!ACTIVE_CATALOG.length && !LOCAL_ADDITIONS.length){
+  hintMsg('First run: load Data_master.csv to enable item scanning');
+  openCatalog();
+}
+</script>
+</body>
+</html>
