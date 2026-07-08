@@ -881,7 +881,14 @@ function camDecode(code){
   }
   /* item */
   const p = IDX[code] || IDX[code.toUpperCase()];
-  if(!p){ vibrate([80,60,80]); camStatus('err', '✗ Not in catalog: '+code+'  (add it from the main screen)'); return; }
+  if(!p){
+    /* unknown item while camera-scanning: close the camera and pop the add-item
+       sheet prefilled (can't stack two sheets). Tap Camera again to resume. */
+    vibrate([80,60,80]);
+    stopCam();
+    openAddItem(code);
+    return;
+  }
   const need = needs();
   if(need){ vibrate([60]); camStatus('warn', '⚠ Set the '+need.toUpperCase()+' bin first'); return; }
   addItem(p);
