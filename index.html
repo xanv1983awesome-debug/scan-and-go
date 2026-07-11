@@ -104,6 +104,18 @@ svg{display:block}
 #camStatus.ok{border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
 #camStatus.warn{border-color:color-mix(in srgb,var(--amber) 45%,var(--line))}
 #camStatus.err{border-color:color-mix(in srgb,var(--danger) 45%,var(--line))}
+/* last-scan quick edit: item name + −/+ inside the status bar */
+#camStatus .csinfo{flex:1;min-width:0}
+#camStatus .csname{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#camStatus .cssub{font-size:11px;color:var(--mut2);margin-top:2px}
+#camStatus .csq{display:flex;align-items:center;gap:7px;margin-left:10px;flex-shrink:0}
+#camStatus .csq button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);
+  background:var(--panel);color:var(--txt);display:flex;align-items:center;justify-content:center}
+#camStatus .csq button:active{background:var(--panel2)}
+#camStatus .csq button svg{width:14px;height:14px}
+#camStatus .csq .csn{min-width:26px;text-align:center;font-weight:700;font-size:16px}
+.row.hl{animation:rowhl 1.6s ease}
+@keyframes rowhl{0%,55%{box-shadow:inset 0 0 0 2px var(--ok)}100%{box-shadow:none}}
 #camDone{margin:0 16px 16px;padding:15px;border-radius:13px;border:none;background:var(--ok);
   color:#04160e;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px}
 #camDone svg{width:16px;height:16px}
@@ -689,10 +701,11 @@ function addItem(p){
   const ex = rows.find(r=>r.key===key && r.from===fromBin && r.to===toBin);
   if(ex){ ex.qty++; }
   else rows.push({id:++ROWSEQ, key, name:p.n, upc:exportKey, qty:1, from:fromBin, to:toBin, type:MODES[mode].type, asinOnly});
-  const q = ex?ex.qty:1;
-  if(asinOnly) flash('warn', p.n, 'No UPC/Ref# — only an ASIN. Verify manually before import.', q);
-  else flash('ok', p.n, (fromBin||'—')+' → '+(toBin||'—'), q);
+  const row = ex || rows[rows.length-1];
+  if(asinOnly) flash('warn', p.n, 'No UPC/Ref# — only an ASIN. Verify manually before import.', row.qty);
+  else flash('ok', p.n, (fromBin||'—')+' → '+(toBin||'—'), row.qty);
   vibrate([25]); renderTape();
+  return row;
 }
 
 /* ══ UI RENDER ══ */
@@ -840,11 +853,44 @@ function pickBin(name){
      then reverts to mode routing so you can keep scanning items after.
    - Debounce: same code held in view is ignored for 1.5s, plus a 500ms
      cooldown between distinct reads so one barcode doesn't fire repeatedly. */
-let scanner=null, camBinTarget=null, camLast='', camLastT=0;
+let scanner=null, camBinTarget=null, camLast='', camLastT=0, camLastRowId=null;
 function camStatus(kind, msg){
   const el=document.getElementById('camStatus');
   el.className=kind||''; el.textContent=msg;
 }
+/* after an item scan, the status bar IS the editor for that line: fix an
+   over-scan with − / + right here instead of hunting through the list */
+const SVG_MINUS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"/></svg>';
+const SVG_PLUS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+function camStatusRow(row){
+  const el=document.getElementById('camStatus');
+  el.className='ok';
+  const units=rows.reduce((s,r)=>s+r.qty,0);
+  el.innerHTML =
+    '<div class="csinfo"><div class="csname">&#10003; '+esc(row.name)+'</div>'+
+    '<div class="cssub">'+esc(row.from||'—')+' &#8594; '+esc(row.to||'—')+
+    ' &#183; session: '+rows.length+' items, '+units+' units</div></div>'+
+    '<div class="csq"><button data-cact="dec" data-id="'+row.id+'">'+SVG_MINUS+'</button>'+
+    '<span class="csn">'+row.qty+'</span>'+
+    '<button data-cact="inc" data-id="'+row.id+'">'+SVG_PLUS+'</button></div>';
+}
+document.getElementById('camStatus').addEventListener('pointerdown', e=>{
+  const btn=e.target.closest('[data-cact]');
+  if(!btn) return;
+  e.preventDefault(); e.stopPropagation();
+  const idx=rows.findIndex(r=>r.id===+btn.dataset.id);
+  if(idx<0) return;                              // row already deleted — stale tap
+  rows[idx].qty += (btn.dataset.cact==='inc'?1:-1);
+  if(rows[idx].qty<=0){
+    const gone=rows.splice(idx,1)[0];
+    camLastRowId=null;
+    camStatus('warn','Removed: '+gone.name+' — scan it again to re-add');
+    vibrate([40]); renderTape(); return;
+  }
+  const n=document.querySelector('#camStatus .csn');
+  if(n) n.textContent=rows[idx].qty;
+  vibrate([15]); renderTape();
+});
 function openCamera(binT){
   camBinTarget = binT || null;
   camLast=''; camLastT=0;
@@ -900,14 +946,21 @@ function camDecode(code){
   }
   const need = needs();
   if(need){ vibrate([60]); camStatus('warn', '⚠ Set the '+need.toUpperCase()+' bin first'); return; }
-  addItem(p);
-  const units=rows.reduce((s,r)=>s+r.qty,0);
-  camStatus('ok', '✓ '+p.n+'   ·   '+rows.length+' items, '+units+' units');
+  const row = addItem(p);
+  camLastRowId = row.id;
+  camStatusRow(row);
 }
 function stopCam(){
   document.getElementById('camSheet').classList.remove('open');
   if(scanner){ scanner.stop().catch(()=>{}); scanner=null; }
   camBinTarget=null;
+  /* land the user on what they just scanned — no hunting through the list */
+  if(camLastRowId!=null){
+    const el=tapeEl.querySelector('.row[data-id="'+camLastRowId+'"]');
+    if(el){ el.scrollIntoView({block:'center'}); el.classList.add('hl');
+            setTimeout(()=>el.classList.remove('hl'),1600); }
+    camLastRowId=null;
+  }
   focusScan();
 }
 document.getElementById('btnCam').onclick = ()=>openCamera(null);
