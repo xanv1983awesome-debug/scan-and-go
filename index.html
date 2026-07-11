@@ -496,9 +496,12 @@ function openAddItem(prefillUpc){
   document.getElementById('niName').value = '';
   document.getElementById('niUpc').value = prefillUpc || '';
   document.getElementById('niRef').value = '';
+  /* iOS keyboard rule: NEVER focus() a field programmatically here. A non-gesture
+     focus gets a cursor but no keyboard, and it corrupts iOS's focus state so even
+     later direct taps stop summoning the keyboard (field-reported). Instead, blur
+     whatever holds focus so the user's own tap on a field is a clean fresh gesture. */
+  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
   document.getElementById('newItemSheet').classList.add('open');
-  const target = prefillUpc ? 'niRef' : 'niName';
-  setTimeout(()=>document.getElementById(target).focus(), 60);
 }
 function closeAddItem(){ document.getElementById('newItemSheet').classList.remove('open'); focusScan(); }
 function confirmAddItem(){
@@ -629,7 +632,13 @@ scanEl.addEventListener('keydown', e=>{
 });
 scanEl.addEventListener('click', ()=>{ scanEl.setAttribute('inputmode','text'); });
 
-function focusScan(){ scanEl.focus({preventScroll:true}); }
+function focusScan(){
+  /* Never steal focus while any sheet is open — the invisible inputmode="none"
+     scan field grabbing focus underneath a sheet is what blocked the keyboard
+     from appearing in the add-item / bin-picker fields on iOS. */
+  if(document.querySelector('.sheet.open')) return;
+  scanEl.focus({preventScroll:true});
+}
 document.addEventListener('touchend', e=>{
   if(!e.target.closest('.sheet') && !e.target.closest('button') &&
      !e.target.closest('.binbox') && !e.target.closest('.tab') &&
