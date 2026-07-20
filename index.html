@@ -361,7 +361,9 @@ svg{display:block}
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<!-- vendored locally (was cdnjs): self-contained, offline-capable, no third-party runtime dependency.
+     Bytes verified against cdnjs SRI sha512-r6rDA7W6ZeQhvl8S7yRVQUKVHdexq+GAlNkNNqVC7YyIV+NwqCTJe2hDWCiffTyRNOeGEzRRJ9ifvRm/HCzGYg== -->
+<script src="./vendor/html5-qrcode.min.js"></script>
 <script>
 /* ══ ICONS (inline SVG, currentColor) ══ */
 const ICONS = {
@@ -416,6 +418,9 @@ document.querySelector('#newItemSheet .eb2').innerHTML = ICONS.x+'Cancel';
 /* ══ DATA (embedded snapshot — refreshable below) ══ */
 const SNAPSHOT_DATE = "2026-06-27T00:00:00Z";
 const CATALOG = [];  // shell build: catalog is never published — load Data_master.csv on-device
+// data-less public build: real bin/location names are private business data and are NOT published.
+// The picker self-populates from Data_master.csv on-device (see the LOCATIONS.push on catalog load, ~L470),
+// so on the owner's own devices every real location repopulates automatically once the CSV is loaded.
 const LOCATIONS = [];
 
 /* ══ CATALOG: prefer a locally-refreshed copy over the embedded snapshot ══ */
