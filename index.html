@@ -498,7 +498,7 @@ document.querySelector('#newItemSheet .eb2').innerHTML = ICONS.x+'Cancel';
    keep APP_VERSION equal to the service-worker cache suffix (build_shell.py --repo
    writes it into the repo's sw.js for you). The version shows in the app bar so a
    stale install is visible at a glance instead of being guessed at. */
-const APP_VERSION = "v9";
+const APP_VERSION = "v10";
 const APP_UPDATED = "2026-08-14";
 
 const SNAPSHOT_DATE = "2026-06-27T00:00:00Z";
@@ -1013,7 +1013,37 @@ function handleScan(code){
 
 /* Teach the app one FBA label. Ask for anything that already identifies the item —
    its UPC, set number or ASIN — and remember the pairing permanently. */
+const LINK_WINDOW_MS = 5 * 60 * 1000;   // "the item I just scanned", generously
+
+function bindFnsku(fnsku, p){
+  if(!p.a){
+    flash('err', p.n, 'That item has no ASIN in the catalog — add one first', '');
+    vibrate([90,60,90]);
+    return false;
+  }
+  learnFnsku(fnsku, p.a);
+  saveFnskuMap(); rebuildIndex();
+  /* Back-fill any line already scanned for this item — it was created before the
+     label was known, and the box-content export reads fnsku off the line. */
+  const a = p.a.toUpperCase();
+  for(const r of rows) if(!r.fnsku && (r.asin||'').toUpperCase()===a) r.fnsku = fnsku;
+  renderTape();
+  flash('ok', p.n, 'FBA label '+fnsku+' linked — it will scan from now on', '');
+  vibrate([30]);
+  return true;
+}
+
 function linkFnsku(fnsku){
+  /* Preferred path: you scanned the product a moment ago, so we already know what
+     this label belongs to. One confirmation beats typing a code into a dialog. */
+  if(lastScanned && Date.now()-lastScanned.at < LINK_WINDOW_MS){
+    const p = lastScanned.p;
+    if(confirm('New FBA label\n'+fnsku+'\n\nLink it to the item you just scanned?\n\n'+
+               p.n+'\n\nOK = yes, link it\nCancel = choose a different item')){
+      bindFnsku(fnsku, p);
+      return;
+    }
+  }
   const ans = prompt('New FBA label '+fnsku+'\n\nWhich item is this? Scan or type its '+
                      'UPC, set number, or ASIN:', '');
   if(ans===null) return;
@@ -1025,15 +1055,7 @@ function linkFnsku(fnsku){
     vibrate([90,60,90]);
     return;
   }
-  if(!p.a){
-    flash('err', p.n, 'That item has no ASIN in the catalog — add one first', '');
-    vibrate([90,60,90]);
-    return;
-  }
-  learnFnsku(fnsku, p.a);
-  saveFnskuMap(); rebuildIndex();
-  flash('ok', p.n, 'FBA label '+fnsku+' linked — it will scan from now on', '');
-  vibrate([30]);
+  bindFnsku(fnsku, p);
 }
 
 function assignBin(name){
@@ -1058,7 +1080,13 @@ function fnskuFor(p, code){
   for(const f in FNSKU_MAP){ if(FNSKU_MAP[f]===a) return f; }
   return '';
 }
+/* The item most recently scanned, so an FBA label scanned straight afterwards can
+   be bound to it. Labelling is done item-in-hand: scan the product's barcode, scan
+   the label you just stuck on it, done — no typing into a dialog. */
+let lastScanned = null;
+
 function addItem(p, code){
+  lastScanned = {p, at: Date.now()};
   const key = p.u||p.r||p.a;
   const exportKey = p.u||p.r||'';
   const asinOnly = !p.u && !p.r && !!p.a;
