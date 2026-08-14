@@ -37,7 +37,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);display:flex;
   -webkit-font-smoothing:antialiased}
 svg{display:block}
 
-/* ── app header ────────────────────────────── */
+/* â”€â”€ app header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .appbar{display:flex;align-items:center;gap:10px;padding:14px 16px 8px}
 .appbar .mark{width:30px;height:30px;border-radius:9px;background:var(--panel2);
   display:flex;align-items:center;justify-content:center;flex:none;border:1px solid var(--line-soft)}
@@ -58,14 +58,14 @@ svg{display:block}
 .newitembody input:focus{border-color:var(--blue)}
 .newitembody .note{font-size:11.5px;color:var(--mut2);margin-top:8px;line-height:1.5}
 
-/* ── mode tabs ─────────────────────────────── */
+/* â”€â”€ mode tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .tabs{display:flex;gap:6px;padding:4px 16px 8px}
 .tab{flex:1;text-align:center;padding:11px 4px;border-radius:12px;background:var(--panel);
   border:1px solid var(--line);color:var(--mut);font-weight:700;font-size:11.5px;
   text-transform:uppercase;letter-spacing:.09em;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
 .tab.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:var(--shadow-sm)}
 
-/* ── bin context ───────────────────────────── */
+/* â”€â”€ bin context â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .binbar{display:flex;gap:8px;padding:6px 16px}
 .binbox{flex:1;background:var(--panel);border:1.5px solid var(--line);border-radius:var(--radius-sm);
   padding:9px 12px;min-height:56px;cursor:pointer;transition:border-color .18s;position:relative}
@@ -81,7 +81,7 @@ svg{display:block}
 .arrow{align-self:center;color:var(--mut2);flex:none}
 .arrow svg{width:15px;height:15px}
 
-/* ── scan field ────────────────────────────── */
+/* â”€â”€ scan field â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .scanwrap{padding:8px 16px 2px;position:relative}
 #scan{width:100%;padding:17px 44px 17px 16px;font-size:17px;border-radius:var(--radius-sm);
   text-align:center;border:1.5px solid var(--line);background:var(--panel2);color:var(--txt);
@@ -91,7 +91,7 @@ svg{display:block}
   cursor:pointer;padding:8px;border-radius:9px}
 .scanwrap .sicon:active{background:var(--panel)}
 .scanwrap .sicon svg{width:20px;height:20px}
-/* per-box aim button — scan straight into this From/To box */
+/* per-box aim button â€” scan straight into this From/To box */
 .binbox .binaim{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:8px;
   border:1px solid var(--line);background:var(--panel2);color:var(--blue);
   display:flex;align-items:center;justify-content:center;padding:0}
@@ -118,7 +118,7 @@ svg{display:block}
 #camStatus.ok{border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
 #camStatus.warn{border-color:color-mix(in srgb,var(--amber) 45%,var(--line))}
 #camStatus.err{border-color:color-mix(in srgb,var(--danger) 45%,var(--line))}
-/* last-scan quick edit: item name + −/+ inside the status bar */
+/* last-scan quick edit: item name + âˆ’/+ inside the status bar */
 #camStatus .csinfo{flex:1;min-width:0}
 #camStatus .csname{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #camStatus .cssub{font-size:11px;color:var(--mut2);margin-top:2px}
@@ -135,7 +135,7 @@ svg{display:block}
 #camDone svg{width:16px;height:16px}
 .hint{text-align:center;font-size:11px;color:var(--mut2);padding:6px 16px 0;min-height:15px}
 
-/* ── flash confirmation ───────────────────── */
+/* â”€â”€ flash confirmation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 #flash{margin:8px 16px;border-radius:var(--radius-sm);padding:13px 14px;display:none;
   border:1px solid;box-shadow:var(--shadow-sm)}
 #flash.ok{display:flex;align-items:center;gap:11px;background:color-mix(in srgb, var(--ok) 12%, var(--panel));border-color:color-mix(in srgb, var(--ok) 45%, var(--line))}
@@ -153,7 +153,7 @@ svg{display:block}
 @keyframes pop{0%{transform:scale(.97);opacity:.5}100%{transform:scale(1);opacity:1}}
 #flash.ok,#flash.warn,#flash.err{animation:pop .16s ease-out}
 
-/* ── session tape ──────────────────────────── */
+/* â”€â”€ session tape â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .tapehead{display:flex;justify-content:space-between;align-items:baseline;padding:12px 16px 5px}
 .tapehead .t1{font-size:10.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--mut2)}
 .tapehead .t2{font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums;font-weight:600}
@@ -183,7 +183,7 @@ svg{display:block}
 .tapempty{text-align:center;color:var(--mut2);padding:38px 24px;font-size:13px;line-height:1.7}
 .tapempty svg{width:34px;height:34px;margin:0 auto 12px;opacity:.5;display:block}
 
-/* ── bottom bar ────────────────────────────── */
+/* â”€â”€ bottom bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .bottom{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--line-soft);background:var(--bg)}
 .bottom button{border:none;border-radius:13px;font-weight:700;font-size:13.5px;padding:15px 10px;
   display:flex;align-items:center;justify-content:center;gap:7px;transition:transform .1s,opacity .15s}
@@ -193,7 +193,7 @@ svg{display:block}
 #btnExport{flex:2;background:var(--ok);color:#04160e}
 #btnExport:disabled{background:var(--panel2);color:var(--mut2);opacity:.7}
 
-/* ── sheets (bin picker / export / catalog) ── */
+/* â”€â”€ sheets (bin picker / export / catalog) â”€â”€ */
 .sheet{position:fixed;inset:0;background:rgba(5,8,13,.6);backdrop-filter:blur(2px);display:none;z-index:20}
 .sheet.open{display:flex;flex-direction:column;justify-content:flex-end}
 .sheetin{background:var(--panel);border-radius:20px 20px 0 0;max-height:84%;
@@ -222,7 +222,7 @@ svg{display:block}
 .eb1{background:var(--ok);color:#04160e}
 .eb2{background:var(--panel2);color:var(--txt);border:1px solid var(--line)!important}
 
-/* ── catalog sheet ─────────────────────────── */
+/* â”€â”€ catalog sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .catbody{padding:2px 18px 4px;font-size:13px;color:var(--mut);line-height:1.6}
 .catstat{display:flex;gap:10px;margin:10px 18px 14px}
 .catstat .c{flex:1;background:var(--panel2);border:1px solid var(--line-soft);border-radius:var(--radius-sm);
@@ -267,7 +267,7 @@ svg{display:block}
 
 <!-- Pack mode only: which shipping box the scanned units are going into. Amazon's
      box-content upload needs a per-box split, so the box has to be recorded at pack
-     time — it cannot be reconstructed afterwards from a bin-to-bin transaction. -->
+     time â€” it cannot be reconstructed afterwards from a bin-to-bin transaction. -->
 <div class="binbar" id="boxBar" style="display:none">
   <div class="binbox" id="boxBox" onclick="promptBox()">
     <div class="lbl"> Packing into box</div><div class="val" id="boxVal"></div>
@@ -364,7 +364,7 @@ svg{display:block}
 <div class="sheet" id="boxDimsSheet">
   <div class="sheetin">
     <div class="sheethead"><span>Box weights &amp; sizes</span><span class="x" onclick="closeBoxDims()">&#215;</span></div>
-    <div class="exportbody" style="padding-bottom:0">Type each box's weight and size here —
+    <div class="exportbody" style="padding-bottom:0">Type each box's weight and size here â€”
       they go straight into Amazon's file. Sizes carry over to the next box.</div>
     <div id="boxDimsBody"></div>
     <div class="exportbtns">
@@ -407,7 +407,7 @@ svg{display:block}
       <button onclick="clearLocalAdditions()">Clear locally-added items</button>
     </div>
     <div class="note" style="padding:0 16px 12px">Bins come from <b>bins.csv</b>
-      (run <b>Tools\export_bins.py</b>) — the same Setting-sheet list the printed QR
+      (run <b>Tools\phone_files.py</b>) â€” the same Setting-sheet list the printed QR
       labels are made from. Loading it makes the bin QR labels scan and fills the
       bin picker so you can type a bin instead.</div>
     <input type="file" id="fileInput" accept=".csv">
@@ -428,7 +428,7 @@ svg{display:block}
       <label>Reference # / Set #</label>
       <input id="niRef" placeholder="e.g. 60448">
       <div class="note">Need at least one of UPC or Ref #. This adds the item to your device's
-        catalog right away so you can log it into this session immediately — it still needs to
+        catalog right away so you can log it into this session immediately â€” it still needs to
         go into <b>Data_master.csv</b> for good; the export screen will give you a ready-to-paste
         row for the <b>New_SKUs</b> sheet.</div>
     </div>
@@ -443,7 +443,7 @@ svg{display:block}
      Bytes verified against cdnjs SRI sha512-r6rDA7W6ZeQhvl8S7yRVQUKVHdexq+GAlNkNNqVC7YyIV+NwqCTJe2hDWCiffTyRNOeGEzRRJ9ifvRm/HCzGYg== -->
 <script src="./vendor/html5-qrcode.min.js"></script>
 <script>
-/* ══ ICONS (inline SVG, currentColor) ══ */
+/* â•â• ICONS (inline SVG, currentColor) â•â• */
 const ICONS = {
   scan:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V4a1 1 0 0 1 1-1h3M21 7V4a1 1 0 0 0-1-1h-3M3 17v3a1 1 0 0 0 1 1h3M21 17v3a1 1 0 0 1-1 1h-3M3 12h18"/></svg>',
   from:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="8"/></svg>',
@@ -493,12 +493,12 @@ document.querySelector('#newItemSheet .eb2').innerHTML = ICONS.x+'Cancel';
   else if(t.startsWith('Clear locally')) b.innerHTML = ICONS.trash+t;
 });
 
-/* ══ DATA (embedded snapshot — refreshable below) ══ */
+/* â•â• DATA (embedded snapshot â€” refreshable below) â•â• */
 /* MAINTENANCE RULE: bump APP_VERSION + APP_UPDATED together on every edit, and
    keep APP_VERSION equal to the service-worker cache suffix (build_shell.py --repo
    writes it into the repo's sw.js for you). The version shows in the app bar so a
    stale install is visible at a glance instead of being guessed at. */
-const APP_VERSION = "v10";
+const APP_VERSION = "v11";
 const APP_UPDATED = "2026-08-14";
 
 const SNAPSHOT_DATE = "2026-06-27T00:00:00Z";
@@ -508,7 +508,7 @@ const CATALOG = [];  // shell build: catalog is never published — load Data_ma
 // so on the owner's own devices every real location repopulates automatically once the CSV is loaded.
 const LOCATIONS = [];
 
-/* ══ CATALOG: prefer a locally-refreshed copy over the embedded snapshot ══ */
+/* â•â• CATALOG: prefer a locally-refreshed copy over the embedded snapshot â•â• */
 let ACTIVE_CATALOG = CATALOG, CATALOG_SOURCE = 'snapshot', CATALOG_LOADED_AT = SNAPSHOT_DATE;
 try{
   const saved = localStorage.getItem('scanpwa_catalog');
@@ -524,14 +524,14 @@ try{
    layer, separate from the base catalog (snapshot or refreshed CSV). This way
    resetting/refreshing the base catalog never loses something you scanned in
    at the shelf before it made it into Excel. Base wins on a key collision
-   (buildIndex's "first wins" + base-first ordering below) — once the real
+   (buildIndex's "first wins" + base-first ordering below) â€” once the real
    Data_master.csv catches up with an item, the official record takes over. */
 let LOCAL_ADDITIONS = [];
 try{ LOCAL_ADDITIONS = JSON.parse(localStorage.getItem('scanpwa_local_additions')||'[]'); }catch(e){}
 function saveLocalAdditions(){ localStorage.setItem('scanpwa_local_additions', JSON.stringify(LOCAL_ADDITIONS)); }
 
 /* New items are ALSO queued here until you've pasted them into the New_SKUs
-   sheet in Excel and run AddNewSKUs — independent of the scan session, so
+   sheet in Excel and run AddNewSKUs â€” independent of the scan session, so
    backgrounding/reloading the app never loses track of what still needs to
    go into the workbook. Cleared only by an explicit "done in Excel" tap. */
 let NEW_SKUS = [];
@@ -541,7 +541,7 @@ function saveNewSkus(){ localStorage.setItem('scanpwa_new_skus', JSON.stringify(
 /* FNSKU -> ASIN, learned once and kept forever.
    Data_master.csv has no FNSKU column, and the FBA label is stuck OVER the
    manufacturer barcode, so by packing time the label is often the only barcode
-   left to scan. We can't read this shipment's Amazon file at packing time —
+   left to scan. We can't read this shipment's Amazon file at packing time â€”
    Amazon only lets you download it after the shipment is entered, by which point
    the boxes are packed. But an FNSKU belongs to the SKU, not to the shipment, so
    it stays valid: learn it once (from any past Amazon file, or by linking it by
@@ -558,8 +558,8 @@ function learnFnsku(fnsku, asin){
 }
 const isFnsku = c => /^X00[A-Z0-9]{7}$/i.test((c||'').trim());
 
-/* Optional: a past/current shipment file, only used to bulk-learn FNSKUs and —
-   when one happens to be loaded — to check packed against expected. */
+/* Optional: a past/current shipment file, only used to bulk-learn FNSKUs and â€”
+   when one happens to be loaded â€” to check packed against expected. */
 let SHIPMENT = [];
 try{ SHIPMENT = JSON.parse(localStorage.getItem('scanpwa_shipment')||'[]'); }catch(e){}
 function saveShipment(){ localStorage.setItem('scanpwa_shipment', JSON.stringify(SHIPMENT)); }
@@ -599,7 +599,7 @@ function buildIndex(cat){
   }
   /* FNSKUs last: they can't collide with a UPC/Ref#, and if one somehow did we
      want the catalog's richer record to win. Resolving through the ASIN means a
-     scanned label lands on the real catalog item — same name, same UPC, same
+     scanned label lands on the real catalog item â€” same name, same UPC, same
      Input Item for the Staging import. */
   for(const f in FNSKU_MAP){
     if(idx[f]) continue;
@@ -629,13 +629,13 @@ const LOCSET = new Set(LOCATIONS.map(l=>l.toLowerCase()));
 /* Bins learned on this device, kept forever.
    The published build ships LOCATIONS empty on purpose (bin names are private).
    The intended fallback was unionBins() below, reading the catalog CSV's Bin
-   Location column — but that column is empty in every row of Data_master.csv, so
+   Location column â€” but that column is empty in every row of Data_master.csv, so
    on the hosted app LOCSET stayed empty and every bin QR fell through to "add new
    item". Learning them from the labels themselves needs no published data and no
    change to the Excel side. */
 let LEARNED_BINS = [];
 try{ LEARNED_BINS = JSON.parse(localStorage.getItem('scanpwa_learned_bins')||'[]'); }catch(e){}
-/* Bins loaded in bulk from bins.csv (Tools\export_bins.py) — the same Setting-sheet
+/* Bins loaded in bulk from bins.csv (Tools\phone_files.py) â€” the same Setting-sheet
    Location column the printed QR labels come from, so the list and the labels can
    never disagree. This is the proper fix for the empty bin list; learning one at a
    time from an unrecognised scan stays as the fallback. */
@@ -659,10 +659,10 @@ for(const b of LEARNED_BINS){
 /* Every bin label carries at least one letter; a UPC, EAN or LEGO set number is
    pure digits. That is what lets us ask the right question about an unrecognised
    scan instead of assuming it is a new product. (No real bin name belongs in this
-   file — it is published; build_shell.py asserts on exactly that.) */
+   file â€” it is published; build_shell.py asserts on exactly that.) */
 const looksLikeBin = c => /[A-Za-z]/.test(c||'') && !isFnsku(c);
 
-/* The FBA destination. Match the location named exactly "FBA" — a loose /fba/
+/* The FBA destination. Match the location named exactly "FBA" â€” a loose /fba/
    would hit whichever similarly-named location happens to come first in the list.
    If the bin list hasn't been loaded yet, fall back to the literal so Pick/Pack
    modes still default their destination instead of starting blank. */
@@ -671,7 +671,7 @@ function fbaBin(){
       || LOCATIONS.find(l=>/^fba\b/i.test(l))
       || 'FBA';
 }
-/* Bins can also be learned from the catalog CSV's Bin Location column — this is
+/* Bins can also be learned from the catalog CSV's Bin Location column â€” this is
    what lets the hosted shell ship with no embedded data yet still recognize
    every bin, and it picks up renamed/new bins without a redeploy. */
 function unionBins(items){
@@ -694,7 +694,7 @@ function renderCatMeta(){
   const items = ACTIVE_CATALOG.length + LOCAL_ADDITIONS.length;
   const bins = LOCATIONS.length;
   /* Nothing loaded is the state a fresh install is in, and the old label ("0
-     items") read like a status rather than something to act on — so say what to
+     items") read like a status rather than something to act on â€” so say what to
      do, and make it look tappable. */
   if(!items || !bins){
     el.className = 'catmeta needload';
@@ -710,7 +710,7 @@ function renderCatMeta(){
 }
 renderCatMeta();
 
-/* Version stamp — the point is being able to tell a stale install from a current
+/* Version stamp â€” the point is being able to tell a stale install from a current
    one without guessing. Shown in the app bar and again in the Catalog sheet. */
 function renderVersion(){
   const v = document.getElementById('appVer');
@@ -733,12 +733,12 @@ function openCatalog(){
 function clearLocalAdditions(){
   if(!LOCAL_ADDITIONS.length){ return; }
   if(!confirm('Remove '+LOCAL_ADDITIONS.length+' locally-added item(s) from this device\'s catalog? '+
-    'Only do this once they are confirmed added in Data_master.csv — this does not touch Excel.')) return;
+    'Only do this once they are confirmed added in Data_master.csv â€” this does not touch Excel.')) return;
   LOCAL_ADDITIONS = []; saveLocalAdditions(); rebuildIndex(); renderCatMeta();
   document.getElementById('catLocal').textContent = 'none';
 }
 
-/* ══ ADD NEW ITEM (in the field — UPC/Ref# only, no Excel round-trip needed first) ══ */
+/* â•â• ADD NEW ITEM (in the field â€” UPC/Ref# only, no Excel round-trip needed first) â•â• */
 function openAddItem(prefillUpc){
   document.getElementById('niName').value = '';
   document.getElementById('niUpc').value = prefillUpc || '';
@@ -758,7 +758,7 @@ function confirmAddItem(){
   if(!upc && !ref){ alert('Enter at least a UPC or a Reference #.'); return; }
   if(upc && IDX[upc]){ alert('That UPC is already in the catalog: '+IDX[upc].n); return; }
   if(ref && IDX[ref]){ alert('That Reference # is already in the catalog: '+IDX[ref].n); return; }
-  const item = {n: name||'(unnamed — add name in Excel)', u: upc, r: ref, a: ''};
+  const item = {n: name||'(unnamed â€” add name in Excel)', u: upc, r: ref, a: ''};
   LOCAL_ADDITIONS.push(item); saveLocalAdditions();
   NEW_SKUS.push({name, upc, ref, addedAt: new Date().toISOString()}); saveNewSkus();
   rebuildIndex(); renderCatMeta();
@@ -858,7 +858,7 @@ document.getElementById('binsInput').addEventListener('change', e=>{
       let added = 0;
       for(const b of bins) if(learnBin(b)) added++;
       renderBins(); renderCatMeta();
-      flash('ok', 'Bins loaded', bins.length+' bins ('+added+' new) — QR labels and the picker now work', '', 'box');
+      flash('ok', 'Bins loaded', bins.length+' bins ('+added+' new) â€” QR labels and the picker now work', '', 'box');
     }catch(err){ alert('Could not read that CSV: '+err); }
   };
   rd.readAsText(f);
@@ -874,14 +874,14 @@ function resetCatalog(){
   document.getElementById('catAge').textContent = fmtAge(SNAPSHOT_DATE);
 }
 
-/* ══ STATE ══ */
+/* â•â• STATE â•â• */
 let mode = 'receive';
 let fromBin = 'Receiving';
 let toBin = '';
 let rows = [];
 let binTarget = null;
 
-/* ══ MODE CONFIG ══ */
+/* â•â• MODE CONFIG â•â• */
 const MODES = {
   receive: {type:'Move',       fromLocked:false, fromDefault:'Receiving',
             scanSets:'to',   label:'Scan destination bin, then items'},
@@ -894,7 +894,7 @@ const MODES = {
 };
 
 /* Pack mode carries a third dimension the other modes don't: the shipping box.
-   One pass then produces BOTH outputs — the Staging transactions (so In Stock
+   One pass then produces BOTH outputs â€” the Staging transactions (so In Stock
    nets down) and Amazon's per-box content split. */
 let packBox = 1;
 function promptBox(){
@@ -908,7 +908,7 @@ function setBox(n){
   packBox = n;
   renderBins();
   flash('ok', 'Box '+n, 'Now packing into box '+n, '', 'box');
-  hintMsg('Box '+n+' — scan the shelf bin, then the items going in');
+  hintMsg('Box '+n+' â€” scan the shelf bin, then the items going in');
   vibrate([30]);
 }
 
@@ -945,7 +945,7 @@ function renderBins(){
 }
 function needs(){ if(!fromBin) return 'from'; if(!toBin) return 'to'; return null; }
 
-/* ══ SCAN HANDLING ══ */
+/* â•â• SCAN HANDLING â•â• */
 const scanEl = document.getElementById('scan');
 scanEl.addEventListener('keydown', e=>{
   if(e.key==='Enter'){ e.preventDefault(); handleScan(scanEl.value.trim()); scanEl.value=''; }
@@ -953,7 +953,7 @@ scanEl.addEventListener('keydown', e=>{
 scanEl.addEventListener('click', ()=>{ scanEl.setAttribute('inputmode','text'); });
 
 function focusScan(){
-  /* Never steal focus while any sheet is open — the invisible inputmode="none"
+  /* Never steal focus while any sheet is open â€” the invisible inputmode="none"
      scan field grabbing focus underneath a sheet is what blocked the keyboard
      from appearing in the add-item / bin-picker fields on iOS. */
   if(document.querySelector('.sheet.open')) return;
@@ -967,7 +967,7 @@ document.addEventListener('touchend', e=>{
 
 function handleScan(code){
   if(!code) return;
-  /* "BOX3" / "B3" switches the packing box without touching the phone — print
+  /* "BOX3" / "B3" switches the packing box without touching the phone â€” print
      these as labels and stick one on each box, same trick as the bin QR labels. */
   if(mode==='pack'){
     const bm = /^(?:box|b)[\s-]?(\d{1,2})$/i.exec(code.trim());
@@ -984,11 +984,11 @@ function handleScan(code){
   const p = IDX[code] || IDX[code.toUpperCase()];
   if(!p){
     vibrate([80,60,80]);
-    /* An unrecognised FBA label isn't a new product — it's a known product whose
+    /* An unrecognised FBA label isn't a new product â€” it's a known product whose
        label we haven't met yet. Link it once and it's known forever, instead of
        being dumped into the New SKUs queue where it doesn't belong. */
     if(isFnsku(code)){ linkFnsku(code.toUpperCase()); return; }
-    /* Might be a bin label this device hasn't met yet — ask rather than assume,
+    /* Might be a bin label this device hasn't met yet â€” ask rather than assume,
        because guessing wrong either loses a scan or pollutes the New SKUs queue. */
     if(looksLikeBin(code)){
       if(confirm('"'+code+'" is not in the catalogue.\n\nIs it a BIN label?\n\n'+
@@ -1004,31 +1004,31 @@ function handleScan(code){
   }
   const need = needs();
   if(need){
-    flash('warn', p.n, 'Set the '+need.toUpperCase()+' bin first — scan its QR label', '');
+    flash('warn', p.n, 'Set the '+need.toUpperCase()+' bin first â€” scan its QR label', '');
     vibrate([60]);
     return;
   }
   addItem(p, code);
 }
 
-/* Teach the app one FBA label. Ask for anything that already identifies the item —
-   its UPC, set number or ASIN — and remember the pairing permanently. */
+/* Teach the app one FBA label. Ask for anything that already identifies the item â€”
+   its UPC, set number or ASIN â€” and remember the pairing permanently. */
 const LINK_WINDOW_MS = 5 * 60 * 1000;   // "the item I just scanned", generously
 
 function bindFnsku(fnsku, p){
   if(!p.a){
-    flash('err', p.n, 'That item has no ASIN in the catalog — add one first', '');
+    flash('err', p.n, 'That item has no ASIN in the catalog â€” add one first', '');
     vibrate([90,60,90]);
     return false;
   }
   learnFnsku(fnsku, p.a);
   saveFnskuMap(); rebuildIndex();
-  /* Back-fill any line already scanned for this item — it was created before the
+  /* Back-fill any line already scanned for this item â€” it was created before the
      label was known, and the box-content export reads fnsku off the line. */
   const a = p.a.toUpperCase();
   for(const r of rows) if(!r.fnsku && (r.asin||'').toUpperCase()===a) r.fnsku = fnsku;
   renderTape();
-  flash('ok', p.n, 'FBA label '+fnsku+' linked — it will scan from now on', '');
+  flash('ok', p.n, 'FBA label '+fnsku+' linked â€” it will scan from now on', '');
   vibrate([30]);
   return true;
 }
@@ -1051,7 +1051,7 @@ function linkFnsku(fnsku){
   if(!code) return;
   const p = IDX[code] || IDX[code.toUpperCase()];
   if(!p){
-    flash('err', fnsku, 'That code is not in the catalog either — nothing linked', '');
+    flash('err', fnsku, 'That code is not in the catalog either â€” nothing linked', '');
     vibrate([90,60,90]);
     return;
   }
@@ -1061,18 +1061,18 @@ function linkFnsku(fnsku){
 function assignBin(name){
   const cfg = MODES[mode];
   if(mode==='move'){
-    if(!fromBin){ fromBin=name; hintMsg('FROM set — scan items, then scan TO bin when done'); }
-    else if(!toBin){ toBin=name; hintMsg('TO set — items will move '+fromBin+' → '+toBin); }
+    if(!fromBin){ fromBin=name; hintMsg('FROM set â€” scan items, then scan TO bin when done'); }
+    else if(!toBin){ toBin=name; hintMsg('TO set â€” items will move '+fromBin+' â†’ '+toBin); }
     else { toBin=name; hintMsg('TO changed to '+name); }
-  } else if(cfg.scanSets==='to'){ toBin=name; hintMsg('Destination: '+name+' — scan items'); }
-  else { fromBin=name; hintMsg('Source: '+name+' — scan items'); }
+  } else if(cfg.scanSets==='to'){ toBin=name; hintMsg('Destination: '+name+' â€” scan items'); }
+  else { fromBin=name; hintMsg('Source: '+name+' â€” scan items'); }
   renderBins(); flash('ok', name, 'Bin set', '', 'box'); vibrate([30]);
 }
 
-/* Input Item on export must be UPC or set#/Ref (per the Cowork spec) — ASIN is
+/* Input Item on export must be UPC or set#/Ref (per the Cowork spec) â€” ASIN is
    accepted for SCANNING (matches the workbook's Data.ASIN column) but flagged
    distinctly since it is not a guaranteed valid Input Item for ImportStaging. */
-let ROWSEQ = 0;  // stable per-row id — row identity survives list reordering/removal
+let ROWSEQ = 0;  // stable per-row id â€” row identity survives list reordering/removal
 function fnskuFor(p, code){
   if(isFnsku(code)) return code.toUpperCase();      // scanned the label itself
   const a = (p.a||'').toUpperCase();
@@ -1082,7 +1082,7 @@ function fnskuFor(p, code){
 }
 /* The item most recently scanned, so an FBA label scanned straight afterwards can
    be bound to it. Labelling is done item-in-hand: scan the product's barcode, scan
-   the label you just stuck on it, done — no typing into a dialog. */
+   the label you just stuck on it, done â€” no typing into a dialog. */
 let lastScanned = null;
 
 function addItem(p, code){
@@ -1090,7 +1090,7 @@ function addItem(p, code){
   const key = p.u||p.r||p.a;
   const exportKey = p.u||p.r||'';
   const asinOnly = !p.u && !p.r && !!p.a;
-  /* in pack mode the box is part of a line's identity — the same SKU pulled from
+  /* in pack mode the box is part of a line's identity â€” the same SKU pulled from
      the same bin into two different boxes is two lines, which is exactly the
      split Amazon's upload needs */
   const box = (mode==='pack') ? packBox : 0;
@@ -1101,11 +1101,11 @@ function addItem(p, code){
                   fnsku:(ship&&ship.f)||fnskuFor(p, code), qty:1,
                   from:fromBin, to:toBin, box, type:MODES[mode].type, asinOnly});
   const row = ex || rows[rows.length-1];
-  const where = (mode==='pack') ? ((fromBin||'—')+' → Box '+box) : ((fromBin||'—')+' → '+(toBin||'—'));
+  const where = (mode==='pack') ? ((fromBin||'â€”')+' â†’ Box '+box) : ((fromBin||'â€”')+' â†’ '+(toBin||'â€”'));
   if(mode==='pack' && SHIPMENT.length && !ship){
-    /* scanned something this shipment doesn't contain — better to hear it now than
+    /* scanned something this shipment doesn't contain â€” better to hear it now than
        from build_shipment.py after the box is taped shut */
-    flash('err', p.n, 'NOT IN THIS SHIPMENT — check the item or the pack group', row.qty);
+    flash('err', p.n, 'NOT IN THIS SHIPMENT â€” check the item or the pack group', row.qty);
     vibrate([90,60,90]); renderTape(); return row;
   }
   if(ship){
@@ -1116,23 +1116,23 @@ function addItem(p, code){
     }
     /* Wrong-shelf check: the pick list says where this SKU lives. Picking it from
        somewhere else usually means the wrong item is in your hand, or the bin
-       record is stale — either way you want to know now, not at reconciliation. */
+       record is stale â€” either way you want to know now, not at reconciliation. */
     if(!binMatches(ship.b, fromBin)){
-      flash('warn', p.n, 'Expected in '+ship.b+', picked from '+(fromBin||'—')+
-            '  ·  '+done+'/'+ship.e, row.qty);
+      flash('warn', p.n, 'Expected in '+ship.b+', picked from '+(fromBin||'â€”')+
+            '  Â·  '+done+'/'+ship.e, row.qty);
       vibrate([60,40,60]); renderTape(); return row;
     }
     const left = ship.e - done;
-    flash('ok', p.n, where+'  ·  '+done+'/'+ship.e+(left===0?'  ✓ complete':''), row.qty);
+    flash('ok', p.n, where+'  Â·  '+done+'/'+ship.e+(left===0?'  âœ“ complete':''), row.qty);
     vibrate([25]); renderTape(); return row;
   }
-  if(asinOnly) flash('warn', p.n, 'No UPC/Ref# — only an ASIN. Verify manually before import.', row.qty);
+  if(asinOnly) flash('warn', p.n, 'No UPC/Ref# â€” only an ASIN. Verify manually before import.', row.qty);
   else flash('ok', p.n, where, row.qty);
   vibrate([25]); renderTape();
   return row;
 }
 
-/* ══ UI RENDER ══ */
+/* â•â• UI RENDER â•â• */
 function flash(kind, name, sub, qty){
   const f = document.getElementById('flash');
   f.className = kind;
@@ -1165,7 +1165,7 @@ function renderTape(){
 }
 function updateHeader(){
   const units = rows.reduce((s,r)=>s+r.qty,0);
-  document.getElementById('counts').textContent = rows.length+' items · '+units+' units';
+  document.getElementById('counts').textContent = rows.length+' items Â· '+units+' units';
   const be = document.getElementById('btnExport');
   be.disabled = !rows.length && !NEW_SKUS.length;
   be.innerHTML = ICONS.export+(rows.length?'Export CSV ('+units+')':(NEW_SKUS.length?'Export New SKUs ('+NEW_SKUS.length+')':'Export CSV (0)'));
@@ -1177,17 +1177,17 @@ document.getElementById('btnClearAll').onclick = ()=>{
   if(!confirm('Clear all '+rows.length+' scanned line(s)? This does not affect items you\'ve already added to the catalog.')) return;
   rows=[]; renderTape(); focusScan();
 };
-/* ══ ROW INTERACTIONS — all delegated on #tape, all keyed by stable row id ══
+/* â•â• ROW INTERACTIONS â€” all delegated on #tape, all keyed by stable row id â•â•
    Why this shape (a real field bug): with inline onclick + positional indexes,
-   tapping −/+ while the qty keypad was open fired the input's blur (which
+   tapping âˆ’/+ while the qty keypad was open fired the input's blur (which
    REBUILT the list, destroying the tapped button mid-tap) and then a click on
-   the detached button against a stale index — dead buttons, wrong-row edits,
+   the detached button against a stale index â€” dead buttons, wrong-row edits,
    or a thrown error that froze qty entry. Fixes baked in below:
-   1. pointerdown + preventDefault → a button press never blurs/dismisses the
+   1. pointerdown + preventDefault â†’ a button press never blurs/dismisses the
       keypad, and never generates a follow-up click (no double-fire).
-   2. Delegation → events from detached nodes can't reach #tape, so a mid-
+   2. Delegation â†’ events from detached nodes can't reach #tape, so a mid-
       rebuild tap is simply ignored instead of acting on the wrong row.
-   3. Row id lookup → no positional indexes anywhere; a missing id is a no-op. */
+   3. Row id lookup â†’ no positional indexes anywhere; a missing id is a no-op. */
 const tapeEl = document.getElementById('tape');
 const rowById = id => rows.find(r=>r.id===+id);
 
@@ -1196,7 +1196,7 @@ tapeEl.addEventListener('pointerdown', e=>{
   if(!btn) return;
   e.preventDefault();                       // keep focus (and iOS keypad) where it is
   const idx = rows.findIndex(r=>r.id===+btn.dataset.id);
-  if(idx<0) return;                         // row already gone — ignore stale tap
+  if(idx<0) return;                         // row already gone â€” ignore stale tap
   const act = btn.dataset.act;
   if(act==='del'){
     rows.splice(idx,1); renderTape(); return;
@@ -1207,12 +1207,12 @@ tapeEl.addEventListener('pointerdown', e=>{
     flash('warn', gone.name, 'Removed from session', '');
     renderTape(); return;
   }
-  /* in-place sync: never rebuild the list on ± — a focused qty input (this
+  /* in-place sync: never rebuild the list on Â± â€” a focused qty input (this
      row or any other) keeps its focus and keyboard */
   const inp = tapeEl.querySelector('.q[data-id="'+rows[idx].id+'"]');
   if(inp) inp.value = rows[idx].qty;
   const r = rows[idx];
-  flash('ok', r.name, (r.from||'—')+' → '+(r.to||'—'), r.qty);
+  flash('ok', r.name, (r.from||'â€”')+' â†’ '+(r.to||'â€”'), r.qty);
   vibrate([15]); updateHeader();
 });
 
@@ -1236,7 +1236,7 @@ tapeEl.addEventListener('focusout', e=>{
   } else {
     rows[idx].qty = n;
     const r = rows[idx];
-    flash('ok', r.name, (r.from||'—')+' → '+(r.to||'—'), r.qty);
+    flash('ok', r.name, (r.from||'â€”')+' â†’ '+(r.to||'â€”'), r.qty);
   }
   /* Deliberately NOT calling focusScan() here: doing so right as the numeric
      keypad dismisses caused the very next tap on +/- to land unreliably.
@@ -1250,7 +1250,7 @@ tapeEl.addEventListener('focusin', e=>{
   if(e.target.classList.contains('q')) e.target.select();
 });
 
-/* ══ BIN PICKER ══ */
+/* â•â• BIN PICKER â•â• */
 document.getElementById('fromBox').onclick = ()=>openBin('from');
 document.getElementById('toBox').onclick   = ()=>openBin('to');
 function openBin(which){
@@ -1272,7 +1272,7 @@ function pickBin(name){
   renderBins(); closeBin();
 }
 
-/* ══ CAMERA — continuous scan, per-box aiming, in-camera feedback ══
+/* â•â• CAMERA â€” continuous scan, per-box aiming, in-camera feedback â•â•
    - Stays open and keeps reading (bulk scanning) until you tap Done.
    - camBinTarget (one-shot 'from'|'to') aims the NEXT bin scan at that box,
      then reverts to mode routing so you can keep scanning items after.
@@ -1284,7 +1284,7 @@ function camStatus(kind, msg){
   el.className=kind||''; el.textContent=msg;
 }
 /* after an item scan, the status bar IS the editor for that line: fix an
-   over-scan with − / + right here instead of hunting through the list */
+   over-scan with âˆ’ / + right here instead of hunting through the list */
 const SVG_MINUS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"/></svg>';
 const SVG_PLUS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
 function camStatusRow(row){
@@ -1293,7 +1293,7 @@ function camStatusRow(row){
   const units=rows.reduce((s,r)=>s+r.qty,0);
   el.innerHTML =
     '<div class="csinfo"><div class="csname">&#10003; '+esc(row.name)+'</div>'+
-    '<div class="cssub">'+esc(row.from||'—')+' &#8594; '+esc(row.to||'—')+
+    '<div class="cssub">'+esc(row.from||'â€”')+' &#8594; '+esc(row.to||'â€”')+
     ' &#183; session: '+rows.length+' items, '+units+' units</div></div>'+
     '<div class="csq"><button data-cact="dec" data-id="'+row.id+'">'+SVG_MINUS+'</button>'+
     '<span class="csn">'+row.qty+'</span>'+
@@ -1304,12 +1304,12 @@ document.getElementById('camStatus').addEventListener('pointerdown', e=>{
   if(!btn) return;
   e.preventDefault(); e.stopPropagation();
   const idx=rows.findIndex(r=>r.id===+btn.dataset.id);
-  if(idx<0) return;                              // row already deleted — stale tap
+  if(idx<0) return;                              // row already deleted â€” stale tap
   rows[idx].qty += (btn.dataset.cact==='inc'?1:-1);
   if(rows[idx].qty<=0){
     const gone=rows.splice(idx,1)[0];
     camLastRowId=null;
-    camStatus('warn','Removed: '+gone.name+' — scan it again to re-add');
+    camStatus('warn','Removed: '+gone.name+' â€” scan it again to re-add');
     vibrate([40]); renderTape(); return;
   }
   const n=document.querySelector('#camStatus .csn');
@@ -1322,7 +1322,7 @@ function openCamera(binT){
   document.getElementById('camTitle').textContent =
     camBinTarget ? ('Scan the '+camBinTarget.toUpperCase()+' bin') : 'Camera scan';
   camStatus('', camBinTarget ? ('Aim at the '+camBinTarget.toUpperCase()+' bin QR label')
-                             : 'Point at a bin QR or an item barcode — keep scanning, tap Done when finished');
+                             : 'Point at a bin QR or an item barcode â€” keep scanning, tap Done when finished');
   document.getElementById('camSheet').classList.add('open');
   scanner = new Html5Qrcode('reader');
   scanner.start({facingMode:'environment'},
@@ -1352,17 +1352,17 @@ function camDecode(code){
       const which=camBinTarget.toUpperCase(); camBinTarget=null;
       renderBins(); vibrate([30]);
       document.getElementById('camTitle').textContent='Camera scan';
-      camStatus('ok', '✓ '+which+' set: '+exact+'  —  now scan items');
+      camStatus('ok', 'âœ“ '+which+' set: '+exact+'  â€”  now scan items');
     } else {
       assignBin(exact);
-      camStatus('ok', '✓ Bin set: '+exact+'  —  now scan items');
+      camStatus('ok', 'âœ“ Bin set: '+exact+'  â€”  now scan items');
     }
     return;
   }
   /* item */
   const p = IDX[code] || IDX[code.toUpperCase()];
   if(!p){
-    /* unknown code while camera-scanning: close the camera first — a prompt or the
+    /* unknown code while camera-scanning: close the camera first â€” a prompt or the
        add-item sheet can't stack on the live view. Tap Camera again to resume. */
     vibrate([80,60,80]);
     stopCam();
@@ -1380,7 +1380,7 @@ function camDecode(code){
     return;
   }
   const need = needs();
-  if(need){ vibrate([60]); camStatus('warn', '⚠ Set the '+need.toUpperCase()+' bin first'); return; }
+  if(need){ vibrate([60]); camStatus('warn', 'âš  Set the '+need.toUpperCase()+' bin first'); return; }
   const row = addItem(p, code);
   camLastRowId = row.id;
   camStatusRow(row);
@@ -1389,7 +1389,7 @@ function stopCam(){
   document.getElementById('camSheet').classList.remove('open');
   if(scanner){ scanner.stop().catch(()=>{}); scanner=null; }
   camBinTarget=null;
-  /* land the user on what they just scanned — no hunting through the list */
+  /* land the user on what they just scanned â€” no hunting through the list */
   if(camLastRowId!=null){
     const el=tapeEl.querySelector('.row[data-id="'+camLastRowId+'"]');
     if(el){ el.scrollIntoView({block:'center'}); el.classList.add('hl');
@@ -1405,14 +1405,14 @@ document.querySelectorAll('.binaim').forEach(b=>b.onclick = e=>{
   openCamera(b.dataset.t);
 });
 
-/* ══ EXPORT ══ */
+/* â•â• EXPORT â•â• */
 const HEADERS = ["Status","ImportTarget","Input Item","Date","Trans Type","Qty",
 "From Loc","To Loc","Sold Price","Invoice/Order #","Store","Retail$","US$",
 "Refund Qty","Shipping","Total Cost with Tax","Tax","GST","PST","US Tax",
 "Notes","Rewards","Emails/Accts","PDF Reference"];
 
 /* Prevent Excel/Sheets from executing a leading =,+,-,@ as a formula when this
-   CSV is opened or pasted (CSV-injection hardening — mirrors the same fix
+   CSV is opened or pasted (CSV-injection hardening â€” mirrors the same fix
    recommended for ExportDataMaster on the Excel side). */
 function csvSafe(v){
   const s = String(v==null?'':v);
@@ -1452,7 +1452,7 @@ function buildBoxCSV(){
 }
 /* Box weights + dimensions, typed at the boxes where you actually weigh them.
    Kept in localStorage so a backgrounded app or a reload never loses them, and
-   the last dimensions entered become the default for the next box — most boxes
+   the last dimensions entered become the default for the next box â€” most boxes
    in a shipment are the same carton. */
 let BOXDIMS = {};
 try{ BOXDIMS = JSON.parse(localStorage.getItem('scanpwa_boxdims')||'{}'); }catch(e){}
@@ -1471,7 +1471,7 @@ function openBoxDims(){
   const used = boxesUsed();
   const host = document.getElementById('boxDimsBody');
   if(!used.length){
-    host.innerHTML = '<div class="exportbody">Nothing packed yet — scan items into a box first.</div>';
+    host.innerHTML = '<div class="exportbody">Nothing packed yet â€” scan items into a box first.</div>';
   } else {
     const prev = lastDims();
     host.innerHTML = used.map(b=>{
@@ -1527,7 +1527,7 @@ async function copyBoxCSV(){
 }
 
 /* What to type into Send to Amazon. Packing happens BEFORE the shipment exists in
-   Seller Central, so this is the list you work from to create it — per SKU totals,
+   Seller Central, so this is the list you work from to create it â€” per SKU totals,
    not per box. The per-box split is kept separately for the upload file after. */
 const TOTAL_HEADERS = ["ASIN","FNSKU","UPC/Ref","Product Name","Total Qty","Boxes"];
 function buildTotalsCSV(){
@@ -1559,23 +1559,23 @@ function downloadTotalsCSV(){
   document.body.appendChild(a); a.click(); a.remove();
 }
 
-/* ══ SHIPMENT / FNSKU LEARNING ══ */
+/* â•â• SHIPMENT / FNSKU LEARNING â•â• */
 function openShip(){
   const known = Object.keys(FNSKU_MAP).length;
   document.getElementById('shipBody').innerHTML =
     '<b>'+known+'</b> FBA label(s) known.<br>'+
-    (SHIPMENT.length ? '<b>'+SHIPMENT.length+'</b> SKU(s) loaded from a shipment file — '+
+    (SHIPMENT.length ? '<b>'+SHIPMENT.length+'</b> SKU(s) loaded from a shipment file â€” '+
       'packed counts are being checked against it.<br>' : '') +
     'Amazon only lets you download the box-content file after the shipment is entered, '+
     'so you normally pack first. Load any past file here to teach the app its FBA '+
-    'labels — an FNSKU stays with the SKU, so it keeps working next time.'+
+    'labels â€” an FNSKU stays with the SKU, so it keeps working next time.'+
     '<div class="warnbox" style="margin-top:8px">Make it with:<br>'+
     '<code>build_shipment.py --template &lt;amazon file&gt; --export-shipment ship.csv</code></div>';
   document.getElementById('shipSheet').classList.add('open');
 }
 function closeShip(){ document.getElementById('shipSheet').classList.remove('open'); focusScan(); }
 function clearShipment(){
-  if(!confirm('Clear the loaded shipment? Known FBA labels are KEPT — only the '+
+  if(!confirm('Clear the loaded shipment? Known FBA labels are KEPT â€” only the '+
               'expected-quantity checking stops.')) return;
   SHIPMENT = []; saveShipment(); renderBins(); closeShip();
 }
@@ -1590,7 +1590,7 @@ document.getElementById('shipInput').addEventListener('change', e=>{
       for(const s of items){ if(s.f && s.a && learnFnsku(s.f, s.a)) learned++; }
       saveFnskuMap();
       SHIPMENT = items; saveShipment(); rebuildIndex(); renderBins();
-      flash('ok', 'Shipment loaded', items.length+' SKUs · '+learned+' new FBA label(s) learned', '');
+      flash('ok', 'Shipment loaded', items.length+' SKUs Â· '+learned+' new FBA label(s) learned', '');
       openShip();
     }catch(err){ alert('Could not read that CSV: '+err); }
   };
@@ -1637,7 +1637,7 @@ document.getElementById('btnExport').onclick = ()=>{
     'Save the CSV into <b>Staging\\</b>, then paste its rows into the Staging sheet '+
     'and run <b>ImportStaging</b>.'+
     (flagged?'<div class="warnbox">'+ICONS.warn+' <b>'+flagged+'</b> line(s) matched by ASIN only (no UPC/Ref#) '+
-     'and have a blank Input Item — ImportStaging will silently skip them. Add a UPC or set # on the '+
+     'and have a blank Input Item â€” ImportStaging will silently skip them. Add a UPC or set # on the '+
      'New_SKUs sheet first, or fix the Input Item cell by hand before importing.</div>':''))
     : 'No scanned lines this session.';
   const packed = rows.filter(r=>r.box);
@@ -1652,7 +1652,7 @@ document.getElementById('btnExport').onclick = ()=>{
       'Order of play: <b>1)</b> use the totals file below to enter the shipment in '+
       'Send to Amazon, <b>2)</b> download Amazon\'s box-content file, <b>3)</b> run '+
       '<b>build_shipment.py</b> with this file to fill in the boxes.'+
-      (noAsin?'<div class="warnbox">'+ICONS.warn+' <b>'+noAsin+'</b> line(s) have no ASIN — they '+
+      (noAsin?'<div class="warnbox">'+ICONS.warn+' <b>'+noAsin+'</b> line(s) have no ASIN â€” they '+
        'cannot be matched to Amazon\'s template. Add the ASIN in the Data sheet first.</div>':'');
   } else bb.style.display = 'none';
   const wb2 = document.getElementById('weightBlock');
@@ -1664,7 +1664,7 @@ document.getElementById('btnExport').onclick = ()=>{
     document.getElementById('weightSummary').innerHTML =
       used.length+' box(es).'+
       (missing.length ? '<div class="warnbox">'+ICONS.warn+' Box '+missing.join(', ')+
-        ' still missing weight or size — Amazon needs all four values per box.</div>'
+        ' still missing weight or size â€” Amazon needs all four values per box.</div>'
        : '<br>All boxes have weight and size.');
   } else wb2.style.display = 'none';
   const nb = document.getElementById('newSkuBlock');
@@ -1695,16 +1695,16 @@ function clearSession(){
   renderBins(); hintMsg(MODES[mode].label);
 }
 
-/* ══ PWA install / offline shell ══ */
+/* â•â• PWA install / offline shell â•â• */
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 
-/* ══ init ══ */
+/* â•â• init â•â• */
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>setMode(t.dataset.m));
 setMode('receive');
 renderTape();
-/* First run of the hosted shell: no embedded catalog and nothing loaded yet —
+/* First run of the hosted shell: no embedded catalog and nothing loaded yet â€”
    open the catalog sheet so the one required step is unmissable. */
 if(!ACTIVE_CATALOG.length && !LOCAL_ADDITIONS.length){
   hintMsg('First run: load Data_master.csv to enable item scanning');
