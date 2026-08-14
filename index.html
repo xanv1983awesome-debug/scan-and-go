@@ -97,6 +97,11 @@ svg{display:block}
   display:flex;align-items:center;justify-content:center;padding:0}
 .binbox .binaim svg{width:14px;height:14px}
 .binbox .binaim:active{background:var(--panel)}
+.ver{font-size:10.5px;font-weight:600;color:var(--mut2);margin-left:6px;letter-spacing:.02em}
+.catmeta.needload{border:1.5px solid var(--amber);border-radius:8px;padding:4px 8px;
+  color:var(--amber);animation:need 1.6s ease-in-out infinite}
+.catmeta.needload b{color:var(--amber)}
+.verline{text-align:center;color:var(--mut2);font-size:11px;padding:10px 0 16px}
 .dimbtn{width:100%;background:var(--panel);border:1.5px solid var(--line);color:var(--fg);
   border-radius:var(--radius-sm);padding:9px;font-size:13px;font-weight:600}
 .dimbtn:active{background:var(--line)}
@@ -236,7 +241,7 @@ svg{display:block}
 
 <div class="appbar">
   <div class="mark"></div>
-  <div class="title">Scan &amp; Go</div>
+  <div class="title">Scan &amp; Go<span class="ver" id="appVer"></span></div>
   <button class="addbtn" id="btnAddItem" title="Add new item"></button>
   <div class="catmeta" id="catMeta" onclick="openCatalog()"></div>
 </div>
@@ -407,6 +412,7 @@ svg{display:block}
       bin picker so you can type a bin instead.</div>
     <input type="file" id="fileInput" accept=".csv">
     <input type="file" id="binsInput" accept=".csv" style="display:none">
+    <div class="verline" id="verLine"></div>
   </div>
 </div>
 
@@ -488,6 +494,13 @@ document.querySelector('#newItemSheet .eb2').innerHTML = ICONS.x+'Cancel';
 });
 
 /* ══ DATA (embedded snapshot — refreshable below) ══ */
+/* MAINTENANCE RULE: bump APP_VERSION + APP_UPDATED together on every edit, and
+   keep APP_VERSION equal to the service-worker cache suffix (build_shell.py --repo
+   writes it into the repo's sw.js for you). The version shows in the app bar so a
+   stale install is visible at a glance instead of being guessed at. */
+const APP_VERSION = "v9";
+const APP_UPDATED = "2026-08-14";
+
 const SNAPSHOT_DATE = "2026-06-27T00:00:00Z";
 const CATALOG = [];  // shell build: catalog is never published — load Data_master.csv on-device
 // data-less public build: real bin/location names are private business data and are NOT published.
@@ -678,11 +691,36 @@ function fmtAge(iso){
 function renderCatMeta(){
   const el = document.getElementById('catMeta');
   const age = Math.floor((Date.now()-new Date(CATALOG_LOADED_AT).getTime())/86400000);
+  const items = ACTIVE_CATALOG.length + LOCAL_ADDITIONS.length;
+  const bins = LOCATIONS.length;
+  /* Nothing loaded is the state a fresh install is in, and the old label ("0
+     items") read like a status rather than something to act on — so say what to
+     do, and make it look tappable. */
+  if(!items || !bins){
+    el.className = 'catmeta needload';
+    el.innerHTML = 'Catalog &#9662;<br><b>'+(!items ? 'Load Data_master.csv'
+                                                    : 'Load bins.csv')+'</b>';
+    return;
+  }
   el.classList.toggle('stale', age>14);
+  el.className = 'catmeta'+(age>14?' stale':'');
   const pending = NEW_SKUS.length ? '<br>'+NEW_SKUS.length+' new pending' : '';
-  el.innerHTML = ACTIVE_CATALOG.length+' items<br><b>'+fmtAge(CATALOG_LOADED_AT)+'</b>'+pending;
+  el.innerHTML = 'Catalog &#9662;<br>'+items+' items &middot; '+bins+' bins<br><b>'+
+                 fmtAge(CATALOG_LOADED_AT)+'</b>'+pending;
 }
 renderCatMeta();
+
+/* Version stamp — the point is being able to tell a stale install from a current
+   one without guessing. Shown in the app bar and again in the Catalog sheet. */
+function renderVersion(){
+  const v = document.getElementById('appVer');
+  if(v) v.textContent = APP_VERSION;
+  const line = document.getElementById('verLine');
+  if(line) line.innerHTML = 'Scan &amp; Go <b>'+APP_VERSION+'</b> &middot; updated '+
+    APP_UPDATED+'<br>If this is older than the version you were told to expect, '+
+    'fully close the app and reopen it.';
+}
+renderVersion();
 
 function openCatalog(){
   document.getElementById('catCount').textContent = ACTIVE_CATALOG.length.toLocaleString();

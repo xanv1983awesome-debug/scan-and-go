@@ -1,7 +1,7 @@
 // Offline app-shell cache for the hosted Scan & Go shell. No inventory data is
 // ever in this cache: the catalog lives in localStorage, loaded on-device from
 // Data_master.csv via the file picker.
-const CACHE = 'scanandgo-pages-v8';
+const CACHE = 'scanandgo-pages-v9';
 const SHELL = ['./', './index.html', './manifest.json', './vendor/html5-qrcode.min.js', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
