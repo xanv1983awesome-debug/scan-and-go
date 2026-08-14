@@ -97,6 +97,15 @@ svg{display:block}
   display:flex;align-items:center;justify-content:center;padding:0}
 .binbox .binaim svg{width:14px;height:14px}
 .binbox .binaim:active{background:var(--panel)}
+.dimbtn{width:100%;background:var(--panel);border:1.5px solid var(--line);color:var(--fg);
+  border-radius:var(--radius-sm);padding:9px;font-size:13px;font-weight:600}
+.dimbtn:active{background:var(--line)}
+.dimrow{border-top:1px solid var(--line);padding:10px 16px}
+.dimhead{font-size:13px;font-weight:700;margin-bottom:8px}
+.dimf{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.dimf span{font-size:12.5px;color:var(--mut2)}
+.dimf input{width:110px;background:var(--panel);border:1.5px solid var(--line);color:var(--fg);
+  border-radius:8px;padding:8px 10px;font-size:15px;text-align:right}
 /* in-camera feedback bar + continuous-scan controls */
 #camStatus{margin:0 16px 10px;padding:11px 13px;border-radius:var(--radius-sm);font-size:13px;
   line-height:1.45;background:var(--panel2);border:1px solid var(--line);color:var(--txt);min-height:44px;
@@ -235,6 +244,7 @@ svg{display:block}
 <div class="tabs">
   <div class="tab on" data-m="receive">Receive</div>
   <div class="tab" data-m="fba">Pick FBA</div>
+  <div class="tab" data-m="pack">Pack FBA</div>
   <div class="tab" data-m="move">Move</div>
 </div>
 
@@ -248,6 +258,21 @@ svg{display:block}
     <div class="lbl"> To</div><div class="val" id="toVal"></div>
     <button class="binaim" data-t="to" title="Scan into To"></button>
   </div>
+</div>
+
+<!-- Pack mode only: which shipping box the scanned units are going into. Amazon's
+     box-content upload needs a per-box split, so the box has to be recorded at pack
+     time — it cannot be reconstructed afterwards from a bin-to-bin transaction. -->
+<div class="binbar" id="boxBar" style="display:none">
+  <div class="binbox" id="boxBox" onclick="promptBox()">
+    <div class="lbl"> Packing into box</div><div class="val" id="boxVal"></div>
+  </div>
+  <div class="binbox" id="shipBox" onclick="openShip()">
+    <div class="lbl"> Shipment</div><div class="val" id="shipVal"></div>
+  </div>
+</div>
+<div class="binbar" id="dimBar" style="display:none">
+  <button class="dimbtn" onclick="openBoxDims()">Box weights &amp; sizes</button>
 </div>
 
 <div class="scanwrap">
@@ -302,6 +327,23 @@ svg{display:block}
       <button class="eb2" onclick="copyCSV()">Copy CSV to clipboard</button>
       <button class="eb2" onclick="clearSession()">Finish &amp; clear session</button>
     </div>
+    <div id="weightBlock" style="display:none">
+      <div class="sheethead" style="padding-top:4px"><span style="font-size:14px">Box weights &amp; sizes</span></div>
+      <div class="exportbody" id="weightSummary"></div>
+      <div class="exportbtns">
+        <button class="eb1" onclick="downloadWeightsCSV()">Save box weights CSV</button>
+        <button class="eb2" onclick="openBoxDims()">Edit box weights &amp; sizes</button>
+      </div>
+    </div>
+    <div id="boxBlock" style="display:none">
+      <div class="sheethead" style="padding-top:4px"><span style="font-size:14px">Amazon box content</span></div>
+      <div class="exportbody" id="boxSummary"></div>
+      <div class="exportbtns">
+        <button class="eb1" onclick="downloadTotalsCSV()">1. Save totals (to enter in Amazon)</button>
+        <button class="eb1" onclick="downloadBoxCSV()">2. Save box content CSV</button>
+        <button class="eb2" onclick="copyBoxCSV()">Copy box content CSV</button>
+      </div>
+    </div>
     <div id="newSkuBlock" style="display:none">
       <div class="sheethead" style="padding-top:4px"><span style="font-size:14px">New SKUs pending Excel entry</span></div>
       <div class="exportbody" id="newSkuSummary"></div>
@@ -311,6 +353,30 @@ svg{display:block}
         <button class="eb2 nb3" onclick="markNewSkusDone()">Added to Excel &mdash; clear this list</button>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="sheet" id="boxDimsSheet">
+  <div class="sheetin">
+    <div class="sheethead"><span>Box weights &amp; sizes</span><span class="x" onclick="closeBoxDims()">&#215;</span></div>
+    <div class="exportbody" style="padding-bottom:0">Type each box's weight and size here —
+      they go straight into Amazon's file. Sizes carry over to the next box.</div>
+    <div id="boxDimsBody"></div>
+    <div class="exportbtns">
+      <button class="eb1" onclick="closeBoxDims()">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="shipSheet">
+  <div class="sheetin">
+    <div class="sheethead"><span>Shipment being packed</span><span class="x" onclick="closeShip()">&#215;</span></div>
+    <div class="exportbody" id="shipBody"></div>
+    <div class="exportbtns">
+      <button class="eb1" onclick="document.getElementById('shipInput').click()">Load shipment CSV</button>
+      <button class="eb2" onclick="clearShipment()">Clear shipment</button>
+    </div>
+    <input type="file" id="shipInput" accept=".csv" style="display:none">
   </div>
 </div>
 
@@ -419,7 +485,7 @@ document.querySelector('#newItemSheet .eb2').innerHTML = ICONS.x+'Cancel';
 const SNAPSHOT_DATE = "2026-06-27T00:00:00Z";
 const CATALOG = [];  // shell build: catalog is never published — load Data_master.csv on-device
 // data-less public build: real bin/location names are private business data and are NOT published.
-// The picker self-populates from Data_master.csv on-device (see the LOCATIONS.push on catalog load, ~L470),
+// The picker self-populates from Data_master.csv on-device (see the LOCATIONS.push on catalog load),
 // so on the owner's own devices every real location repopulates automatically once the CSV is loaded.
 const LOCATIONS = [];
 
@@ -453,6 +519,50 @@ let NEW_SKUS = [];
 try{ NEW_SKUS = JSON.parse(localStorage.getItem('scanpwa_new_skus')||'[]'); }catch(e){}
 function saveNewSkus(){ localStorage.setItem('scanpwa_new_skus', JSON.stringify(NEW_SKUS)); }
 
+/* FNSKU -> ASIN, learned once and kept forever.
+   Data_master.csv has no FNSKU column, and the FBA label is stuck OVER the
+   manufacturer barcode, so by packing time the label is often the only barcode
+   left to scan. We can't read this shipment's Amazon file at packing time —
+   Amazon only lets you download it after the shipment is entered, by which point
+   the boxes are packed. But an FNSKU belongs to the SKU, not to the shipment, so
+   it stays valid: learn it once (from any past Amazon file, or by linking it by
+   hand the first time it's scanned) and every future pack knows it. */
+let FNSKU_MAP = {};
+try{ FNSKU_MAP = JSON.parse(localStorage.getItem('scanpwa_fnsku_map')||'{}'); }catch(e){}
+function saveFnskuMap(){ localStorage.setItem('scanpwa_fnsku_map', JSON.stringify(FNSKU_MAP)); }
+function learnFnsku(fnsku, asin){
+  if(!fnsku) return false;
+  const f = fnsku.toUpperCase();
+  if(FNSKU_MAP[f] === (asin||'').toUpperCase()) return false;
+  FNSKU_MAP[f] = (asin||'').toUpperCase();
+  return true;
+}
+const isFnsku = c => /^X00[A-Z0-9]{7}$/i.test((c||'').trim());
+
+/* Optional: a past/current shipment file, only used to bulk-learn FNSKUs and —
+   when one happens to be loaded — to check packed against expected. */
+let SHIPMENT = [];
+try{ SHIPMENT = JSON.parse(localStorage.getItem('scanpwa_shipment')||'[]'); }catch(e){}
+function saveShipment(){ localStorage.setItem('scanpwa_shipment', JSON.stringify(SHIPMENT)); }
+
+function parseShipmentCSV(text){
+  const rows = csvRows(text);
+  if(!rows.length) return [];
+  const hdr = rows[0].map(h=>h.trim().toLowerCase());
+  const ci = n => hdr.indexOf(n);
+  const cF=ci('fnsku'), cA=ci('asin'), cS=ci('sku'), cN=ci('product name'), cE=ci('expected');
+  if(cF<0 && cA<0) throw new Error('needs at least an FNSKU or ASIN column');
+  const out = [];
+  for(let r=1;r<rows.length;r++){
+    const row = rows[r];
+    if(!row || row.every(v=>!v||!v.trim())) continue;
+    const g = i => i>=0 ? (row[i]||'').trim() : '';
+    out.push({f:g(cF).toUpperCase(), a:g(cA).toUpperCase(), s:g(cS),
+              n:g(cN), e:parseInt(g(cE)||'0',10)||0});
+  }
+  return out;
+}
+
 function buildIndex(cat){
   const idx = {};
   for(const p of cat){
@@ -460,11 +570,33 @@ function buildIndex(cat){
     if(p.r && !idx[p.r]) idx[p.r] = p;
     if(p.a && !idx[p.a.toUpperCase()]) idx[p.a.toUpperCase()] = p;
   }
+  /* FNSKUs last: they can't collide with a UPC/Ref#, and if one somehow did we
+     want the catalog's richer record to win. Resolving through the ASIN means a
+     scanned label lands on the real catalog item — same name, same UPC, same
+     Input Item for the Staging import. */
+  for(const f in FNSKU_MAP){
+    if(idx[f]) continue;
+    const known = FNSKU_MAP[f] && idx[FNSKU_MAP[f]];
+    if(known) idx[f] = known;
+  }
   return idx;
 }
 let IDX;
 function rebuildIndex(){ IDX = buildIndex([...ACTIVE_CATALOG, ...LOCAL_ADDITIONS]); }
 rebuildIndex();
+
+/* expected/packed bookkeeping, keyed by ASIN then FNSKU */
+function shipFor(p){
+  if(!SHIPMENT.length) return null;
+  const a = (p.a||'').toUpperCase();
+  return SHIPMENT.find(s=>a && s.a===a) || null;
+}
+function packedFor(s){
+  if(!s) return 0;
+  return rows.filter(r=>r.box && ((s.a && (r.asin||'').toUpperCase()===s.a) ||
+                                  (s.f && (r.fnsku||'')===s.f)))
+             .reduce((n,r)=>n+r.qty, 0);
+}
 const LOCSET = new Set(LOCATIONS.map(l=>l.toLowerCase()));
 /* Bins can also be learned from the catalog CSV's Bin Location column — this is
    what lets the hosted shell ship with no embedded data yet still recognize
@@ -545,7 +677,7 @@ function closeCatalog(){ document.getElementById('catSheet').classList.remove('o
 
 /* Parse Data_master.csv exactly per its known 8-column export schema
    (Category, Product Name, Product Reference#, UPC, ASIN, HasVariants, Avg Cost, Bin Location) */
-function parseCatalogCSV(text){
+function csvRows(text){
   const rows = [];
   let i=0, field='', row=[], inQ=false;
   const pushField=()=>{row.push(field);field=''};
@@ -563,6 +695,10 @@ function parseCatalogCSV(text){
     field+=c;i++;
   }
   if(field.length||row.length) pushRow();
+  return rows;
+}
+function parseCatalogCSV(text){
+  const rows = csvRows(text);
   if(!rows.length) return [];
   const hdr = rows[0].map(h=>h.trim().toLowerCase());
   const ci = name => hdr.indexOf(name);
@@ -619,15 +755,38 @@ const MODES = {
             scanSets:'to',   label:'Scan destination bin, then items'},
   fba:     {type:'Send to FBA',fromLocked:false, fromDefault:'',
             scanSets:'from', label:'Scan shelf bin, then items to pull'},
+  pack:    {type:'Send to FBA',fromLocked:false, fromDefault:'',
+            scanSets:'from', label:'Set the box, scan shelf bin, then items as you pack'},
   move:    {type:'Move',       fromLocked:false, fromDefault:'',
             scanSets:'from', label:'Scan FROM bin, items, then TO bin'}
 };
+
+/* Pack mode carries a third dimension the other modes don't: the shipping box.
+   One pass then produces BOTH outputs — the Staging transactions (so In Stock
+   nets down) and Amazon's per-box content split. */
+let packBox = 1;
+function promptBox(){
+  const v = prompt('Packing into which box number? (1-30)', packBox);
+  if(v===null) return;
+  const n = parseInt(v, 10);
+  if(!(n>=1 && n<=30)){ alert('Box must be a number from 1 to 30.'); return; }
+  setBox(n);
+}
+function setBox(n){
+  packBox = n;
+  renderBins();
+  flash('ok', 'Box '+n, 'Now packing into box '+n, '', 'box');
+  hintMsg('Box '+n+' — scan the shelf bin, then the items going in');
+  vibrate([30]);
+}
 
 function setMode(m){
   mode = m;
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on', t.dataset.m===m));
   fromBin = MODES[m].fromDefault;
-  toBin = (m==='fba') ? (LOCATIONS.find(l=>/fba/i.test(l))||'') : '';
+  toBin = (m==='fba'||m==='pack') ? (LOCATIONS.find(l=>/fba/i.test(l))||'') : '';
+  document.getElementById('boxBar').style.display = (m==='pack') ? '' : 'none';
+  document.getElementById('dimBar').style.display = (m==='pack') ? '' : 'none';
   renderBins(); focusScan();
   hintMsg(MODES[m].label);
 }
@@ -639,6 +798,18 @@ function renderBins(){
   tv.textContent = toBin || 'tap to set';   tv.className='val'+(toBin?'':' empty');
   fb.className='binbox'+(fromBin?' set':(needs()==='from'?' need':''));
   tb.className='binbox'+(toBin?' set':(needs()==='to'?' need':''));
+  const bv = document.getElementById('boxVal');
+  if(bv){
+    bv.textContent = 'Box '+packBox;
+    document.getElementById('boxBox').className = 'binbox set';
+  }
+  const sv = document.getElementById('shipVal');
+  if(sv){
+    const known = Object.keys(FNSKU_MAP).length;
+    sv.textContent = SHIPMENT.length ? SHIPMENT.length+' SKUs loaded'
+                                     : known+' labels known';
+    document.getElementById('shipBox').className = 'binbox'+(known?' set':'');
+  }
 }
 function needs(){ if(!fromBin) return 'from'; if(!toBin) return 'to'; return null; }
 
@@ -664,6 +835,15 @@ document.addEventListener('touchend', e=>{
 
 function handleScan(code){
   if(!code) return;
+  /* "BOX3" / "B3" switches the packing box without touching the phone — print
+     these as labels and stick one on each box, same trick as the bin QR labels. */
+  if(mode==='pack'){
+    const bm = /^(?:box|b)[\s-]?(\d{1,2})$/i.exec(code.trim());
+    if(bm){
+      const n = parseInt(bm[1], 10);
+      if(n>=1 && n<=30){ setBox(n); return; }
+    }
+  }
   if(LOCSET.has(code.toLowerCase())){
     const exact = LOCATIONS.find(l=>l.toLowerCase()===code.toLowerCase());
     assignBin(exact);
@@ -672,6 +852,10 @@ function handleScan(code){
   const p = IDX[code] || IDX[code.toUpperCase()];
   if(!p){
     vibrate([80,60,80]);
+    /* An unrecognised FBA label isn't a new product — it's a known product whose
+       label we haven't met yet. Link it once and it's known forever, instead of
+       being dumped into the New SKUs queue where it doesn't belong. */
+    if(isFnsku(code)){ linkFnsku(code.toUpperCase()); return; }
     openAddItem(code);
     return;
   }
@@ -681,7 +865,32 @@ function handleScan(code){
     vibrate([60]);
     return;
   }
-  addItem(p);
+  addItem(p, code);
+}
+
+/* Teach the app one FBA label. Ask for anything that already identifies the item —
+   its UPC, set number or ASIN — and remember the pairing permanently. */
+function linkFnsku(fnsku){
+  const ans = prompt('New FBA label '+fnsku+'\n\nWhich item is this? Scan or type its '+
+                     'UPC, set number, or ASIN:', '');
+  if(ans===null) return;
+  const code = ans.trim();
+  if(!code) return;
+  const p = IDX[code] || IDX[code.toUpperCase()];
+  if(!p){
+    flash('err', fnsku, 'That code is not in the catalog either — nothing linked', '');
+    vibrate([90,60,90]);
+    return;
+  }
+  if(!p.a){
+    flash('err', p.n, 'That item has no ASIN in the catalog — add one first', '');
+    vibrate([90,60,90]);
+    return;
+  }
+  learnFnsku(fnsku, p.a);
+  saveFnskuMap(); rebuildIndex();
+  flash('ok', p.n, 'FBA label '+fnsku+' linked — it will scan from now on', '');
+  vibrate([30]);
 }
 
 function assignBin(name){
@@ -699,16 +908,46 @@ function assignBin(name){
    accepted for SCANNING (matches the workbook's Data.ASIN column) but flagged
    distinctly since it is not a guaranteed valid Input Item for ImportStaging. */
 let ROWSEQ = 0;  // stable per-row id — row identity survives list reordering/removal
-function addItem(p){
+function fnskuFor(p, code){
+  if(isFnsku(code)) return code.toUpperCase();      // scanned the label itself
+  const a = (p.a||'').toUpperCase();
+  if(!a) return '';
+  for(const f in FNSKU_MAP){ if(FNSKU_MAP[f]===a) return f; }
+  return '';
+}
+function addItem(p, code){
   const key = p.u||p.r||p.a;
   const exportKey = p.u||p.r||'';
   const asinOnly = !p.u && !p.r && !!p.a;
-  const ex = rows.find(r=>r.key===key && r.from===fromBin && r.to===toBin);
+  /* in pack mode the box is part of a line's identity — the same SKU pulled from
+     the same bin into two different boxes is two lines, which is exactly the
+     split Amazon's upload needs */
+  const box = (mode==='pack') ? packBox : 0;
+  const ship = (mode==='pack') ? shipFor(p) : null;
+  const ex = rows.find(r=>r.key===key && r.from===fromBin && r.to===toBin && r.box===box);
   if(ex){ ex.qty++; }
-  else rows.push({id:++ROWSEQ, key, name:p.n, upc:exportKey, qty:1, from:fromBin, to:toBin, type:MODES[mode].type, asinOnly});
+  else rows.push({id:++ROWSEQ, key, name:p.n, upc:exportKey, asin:p.a||'',
+                  fnsku:(ship&&ship.f)||fnskuFor(p, code), qty:1,
+                  from:fromBin, to:toBin, box, type:MODES[mode].type, asinOnly});
   const row = ex || rows[rows.length-1];
+  const where = (mode==='pack') ? ((fromBin||'—')+' → Box '+box) : ((fromBin||'—')+' → '+(toBin||'—'));
+  if(mode==='pack' && SHIPMENT.length && !ship){
+    /* scanned something this shipment doesn't contain — better to hear it now than
+       from build_shipment.py after the box is taped shut */
+    flash('err', p.n, 'NOT IN THIS SHIPMENT — check the item or the pack group', row.qty);
+    vibrate([90,60,90]); renderTape(); return row;
+  }
+  if(ship){
+    const done = packedFor(ship);
+    if(done > ship.e){
+      flash('err', p.n, 'OVER-PACKED: '+done+' of '+ship.e+' expected', row.qty);
+      vibrate([90,60,90]); renderTape(); return row;
+    }
+    flash('ok', p.n, where+'  ·  '+done+'/'+ship.e, row.qty);
+    vibrate([25]); renderTape(); return row;
+  }
   if(asinOnly) flash('warn', p.n, 'No UPC/Ref# — only an ASIN. Verify manually before import.', row.qty);
-  else flash('ok', p.n, (fromBin||'—')+' → '+(toBin||'—'), row.qty);
+  else flash('ok', p.n, where, row.qty);
   vibrate([25]); renderTape();
   return row;
 }
@@ -734,7 +973,8 @@ function renderTape(){
     tape.innerHTML = rows.map(r=>
       '<div class="row'+(r.asinOnly?' flagged':'')+'" data-id="'+r.id+'">'+
         '<div class="info"><div class="rn">'+(r.asinOnly?'<span class="flag">'+ICONS.warn+'</span>':'')+esc(r.name)+'</div>'+
-        '<div class="rm">'+esc(r.type)+' &#183; '+esc(r.from)+' &#8594; '+esc(r.to)+'</div></div>'+
+        '<div class="rm">'+esc(r.type)+' &#183; '+esc(r.from)+' &#8594; '+
+          (r.box ? 'Box '+r.box : esc(r.to))+'</div></div>'+
         '<div class="rq"><button data-act="dec" data-id="'+r.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"/></svg></button>'+
         '<input class="q" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-id="'+r.id+'" value="'+r.qty+'">'+
         '<button data-act="inc" data-id="'+r.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>'+
@@ -1003,6 +1243,171 @@ function buildCSV(){
   }
   return lines.join('\r\n');
 }
+/* Box content: what build_shipment.py needs to fill Amazon's per-box grid.
+   Keyed on ASIN because Amazon's box-content template carries ASIN + FNSKU on
+   every row, while Data_master.csv has no FNSKU at all. */
+const BOX_HEADERS = ["FNSKU","ASIN","UPC/Ref","Product Name","Box","Qty","From Bin"];
+function buildBoxCSV(){
+  const lines = [BOX_HEADERS.join(',')];
+  for(const r of rows){
+    if(!r.box) continue;
+    const rec = {"FNSKU":r.fnsku||"", "ASIN":r.asin, "UPC/Ref":r.upc, "Product Name":r.name,
+                 "Box":r.box, "Qty":r.qty, "From Bin":r.from};
+    lines.push(BOX_HEADERS.map(h=>{
+      let v = csvSafe(rec[h]===undefined?'':rec[h]);
+      return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;
+    }).join(','));
+  }
+  return lines.join('\r\n');
+}
+/* Box weights + dimensions, typed at the boxes where you actually weigh them.
+   Kept in localStorage so a backgrounded app or a reload never loses them, and
+   the last dimensions entered become the default for the next box — most boxes
+   in a shipment are the same carton. */
+let BOXDIMS = {};
+try{ BOXDIMS = JSON.parse(localStorage.getItem('scanpwa_boxdims')||'{}'); }catch(e){}
+function saveBoxDims(){ localStorage.setItem('scanpwa_boxdims', JSON.stringify(BOXDIMS)); }
+const DIM_FIELDS = [['kg','Weight (kg)'],['w','Width (cm)'],['l','Length (cm)'],['h','Height (cm)']];
+
+function boxesUsed(){
+  return [...new Set(rows.filter(r=>r.box).map(r=>r.box))].sort((a,b)=>a-b);
+}
+function lastDims(){
+  const used = boxesUsed();
+  for(let i=used.length-1;i>=0;i--){ const d = BOXDIMS[used[i]]; if(d && d.w) return d; }
+  return {};
+}
+function openBoxDims(){
+  const used = boxesUsed();
+  const host = document.getElementById('boxDimsBody');
+  if(!used.length){
+    host.innerHTML = '<div class="exportbody">Nothing packed yet — scan items into a box first.</div>';
+  } else {
+    const prev = lastDims();
+    host.innerHTML = used.map(b=>{
+      const d = BOXDIMS[b] || {};
+      const units = rows.filter(r=>r.box===b).reduce((n,r)=>n+r.qty,0);
+      return '<div class="dimrow"><div class="dimhead">Box '+b+' &middot; '+units+' units</div>'+
+        DIM_FIELDS.map(([k,lbl])=>
+          '<label class="dimf"><span>'+lbl+'</span>'+
+          '<input type="number" inputmode="decimal" step="0.1" min="0" data-box="'+b+'" data-k="'+k+'" '+
+          'value="'+(d[k]!==undefined&&d[k]!==''?d[k]:(k==='kg'?'':(prev[k]||'')))+'"></label>').join('')+
+        '</div>';
+    }).join('');
+    host.querySelectorAll('input').forEach(inp=>{
+      inp.addEventListener('change', ()=>{
+        const b = inp.dataset.box;
+        BOXDIMS[b] = BOXDIMS[b] || {};
+        BOXDIMS[b][inp.dataset.k] = inp.value.trim();
+        saveBoxDims();
+      });
+    });
+  }
+  document.getElementById('boxDimsSheet').classList.add('open');
+}
+function closeBoxDims(){ document.getElementById('boxDimsSheet').classList.remove('open'); focusScan(); }
+
+const WEIGHT_HEADERS = ["box","weight_kg","width_cm","length_cm","height_cm"];
+function buildWeightsCSV(){
+  const lines = [WEIGHT_HEADERS.join(',')];
+  for(const b of boxesUsed()){
+    const d = BOXDIMS[b] || {};
+    lines.push([b, d.kg||'', d.w||'', d.l||'', d.h||''].join(','));
+  }
+  return lines.join('\r\n');
+}
+function downloadWeightsCSV(){
+  const blob = new Blob([buildWeightsCSV()], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'boxweights_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+function downloadBoxCSV(){
+  const blob = new Blob([buildBoxCSV()], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'boxcontent_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+async function copyBoxCSV(){
+  try{ await navigator.clipboard.writeText(buildBoxCSV()); alert('Box content CSV copied.'); }
+  catch(e){ alert('Copy failed: '+e); }
+}
+
+/* What to type into Send to Amazon. Packing happens BEFORE the shipment exists in
+   Seller Central, so this is the list you work from to create it — per SKU totals,
+   not per box. The per-box split is kept separately for the upload file after. */
+const TOTAL_HEADERS = ["ASIN","FNSKU","UPC/Ref","Product Name","Total Qty","Boxes"];
+function buildTotalsCSV(){
+  const agg = {};
+  for(const r of rows){
+    if(!r.box) continue;
+    const k = (r.asin||r.upc||r.key).toUpperCase();
+    if(!agg[k]) agg[k] = {asin:r.asin, fnsku:r.fnsku, upc:r.upc, name:r.name, qty:0, boxes:new Set()};
+    agg[k].qty += r.qty; agg[k].boxes.add(r.box);
+    if(!agg[k].fnsku && r.fnsku) agg[k].fnsku = r.fnsku;
+  }
+  const lines = [TOTAL_HEADERS.join(',')];
+  for(const k in agg){
+    const a = agg[k];
+    const rec = {"ASIN":a.asin, "FNSKU":a.fnsku||'', "UPC/Ref":a.upc, "Product Name":a.name,
+                 "Total Qty":a.qty, "Boxes":[...a.boxes].sort((x,y)=>x-y).join(' ')};
+    lines.push(TOTAL_HEADERS.map(h=>{
+      let v = csvSafe(rec[h]===undefined?'':rec[h]);
+      return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;
+    }).join(','));
+  }
+  return lines.join('\r\n');
+}
+function downloadTotalsCSV(){
+  const blob = new Blob([buildTotalsCSV()], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'shipment_totals_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ══ SHIPMENT / FNSKU LEARNING ══ */
+function openShip(){
+  const known = Object.keys(FNSKU_MAP).length;
+  document.getElementById('shipBody').innerHTML =
+    '<b>'+known+'</b> FBA label(s) known.<br>'+
+    (SHIPMENT.length ? '<b>'+SHIPMENT.length+'</b> SKU(s) loaded from a shipment file — '+
+      'packed counts are being checked against it.<br>' : '') +
+    'Amazon only lets you download the box-content file after the shipment is entered, '+
+    'so you normally pack first. Load any past file here to teach the app its FBA '+
+    'labels — an FNSKU stays with the SKU, so it keeps working next time.'+
+    '<div class="warnbox" style="margin-top:8px">Make it with:<br>'+
+    '<code>build_shipment.py --template &lt;amazon file&gt; --export-shipment ship.csv</code></div>';
+  document.getElementById('shipSheet').classList.add('open');
+}
+function closeShip(){ document.getElementById('shipSheet').classList.remove('open'); focusScan(); }
+function clearShipment(){
+  if(!confirm('Clear the loaded shipment? Known FBA labels are KEPT — only the '+
+              'expected-quantity checking stops.')) return;
+  SHIPMENT = []; saveShipment(); renderBins(); closeShip();
+}
+document.getElementById('shipInput').addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = ev=>{
+    try{
+      const items = parseShipmentCSV(ev.target.result);
+      if(!items.length){ alert('No rows found in that file.'); return; }
+      let learned = 0;
+      for(const s of items){ if(s.f && s.a && learnFnsku(s.f, s.a)) learned++; }
+      saveFnskuMap();
+      SHIPMENT = items; saveShipment(); rebuildIndex(); renderBins();
+      flash('ok', 'Shipment loaded', items.length+' SKUs · '+learned+' new FBA label(s) learned', '');
+      openShip();
+    }catch(err){ alert('Could not read that CSV: '+err); }
+  };
+  rd.readAsText(f);
+  e.target.value='';
+});
+
 const NEWSKU_HEADERS = ["Status","Category","Product Name","Product Reference#","UPC","ASIN","HasVariants","Bin Location"];
 function buildNewSkuCSV(){
   const lines = [NEWSKU_HEADERS.join(',')];
@@ -1045,6 +1450,33 @@ document.getElementById('btnExport').onclick = ()=>{
      'and have a blank Input Item — ImportStaging will silently skip them. Add a UPC or set # on the '+
      'New_SKUs sheet first, or fix the Input Item cell by hand before importing.</div>':''))
     : 'No scanned lines this session.';
+  const packed = rows.filter(r=>r.box);
+  const bb = document.getElementById('boxBlock');
+  if(packed.length){
+    const boxes = [...new Set(packed.map(r=>r.box))].sort((a,b)=>a-b);
+    const noAsin = packed.filter(r=>!r.asin).length;
+    bb.style.display = '';
+    document.getElementById('boxSummary').innerHTML =
+      '<b>'+packed.reduce((s,r)=>s+r.qty,0)+'</b> units across <b>'+boxes.length+'</b> box(es): '+
+      boxes.map(b=>'Box '+b).join(', ')+'.<br>'+
+      'Order of play: <b>1)</b> use the totals file below to enter the shipment in '+
+      'Send to Amazon, <b>2)</b> download Amazon\'s box-content file, <b>3)</b> run '+
+      '<b>build_shipment.py</b> with this file to fill in the boxes.'+
+      (noAsin?'<div class="warnbox">'+ICONS.warn+' <b>'+noAsin+'</b> line(s) have no ASIN — they '+
+       'cannot be matched to Amazon\'s template. Add the ASIN in the Data sheet first.</div>':'');
+  } else bb.style.display = 'none';
+  const wb2 = document.getElementById('weightBlock');
+  if(packed.length){
+    const used = boxesUsed();
+    const missing = used.filter(b=>!(BOXDIMS[b] && BOXDIMS[b].kg && BOXDIMS[b].w &&
+                                     BOXDIMS[b].l && BOXDIMS[b].h));
+    wb2.style.display = '';
+    document.getElementById('weightSummary').innerHTML =
+      used.length+' box(es).'+
+      (missing.length ? '<div class="warnbox">'+ICONS.warn+' Box '+missing.join(', ')+
+        ' still missing weight or size — Amazon needs all four values per box.</div>'
+       : '<br>All boxes have weight and size.');
+  } else wb2.style.display = 'none';
   const nb = document.getElementById('newSkuBlock');
   if(NEW_SKUS.length){
     nb.style.display = '';
