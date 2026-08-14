@@ -569,8 +569,8 @@ function parseShipmentCSV(text){
   }
   return out;
 }
-/* A pick list may name several bins for one SKU ("T5; Lego Clear Box 1") when the
-   stock is split. Any of them is a correct place to pick from. */
+/* A pick list may name several bins for one SKU, separated by ";", when the stock
+   is split across shelves. Any of them is a correct place to pick from. */
 function binMatches(expected, actual){
   if(!expected || !actual) return true;
   return expected.split(/[;,]/).map(s=>s.trim().toLowerCase())
@@ -649,10 +649,10 @@ for(const b of LEARNED_BINS){
    file — it is published; build_shell.py asserts on exactly that.) */
 const looksLikeBin = c => /[A-Za-z]/.test(c||'') && !isFnsku(c);
 
-/* The FBA destination. Prefer the location named exactly "FBA" over "FBA1 box" /
-   "FBM", which a loose /fba/ match would hit first depending on list order. If the
-   bin list hasn't been loaded yet, fall back to the literal so Pick/Pack modes
-   still default their destination instead of starting blank. */
+/* The FBA destination. Match the location named exactly "FBA" — a loose /fba/
+   would hit whichever similarly-named location happens to come first in the list.
+   If the bin list hasn't been loaded yet, fall back to the literal so Pick/Pack
+   modes still default their destination instead of starting blank. */
 function fbaBin(){
   return LOCATIONS.find(l=>l.toLowerCase()==='fba')
       || LOCATIONS.find(l=>/^fba\b/i.test(l))
