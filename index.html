@@ -598,6 +598,34 @@ function packedFor(s){
              .reduce((n,r)=>n+r.qty, 0);
 }
 const LOCSET = new Set(LOCATIONS.map(l=>l.toLowerCase()));
+
+/* Bins learned on this device, kept forever.
+   The published build ships LOCATIONS empty on purpose (bin names are private).
+   The intended fallback was unionBins() below, reading the catalog CSV's Bin
+   Location column — but that column is empty in every row of Data_master.csv, so
+   on the hosted app LOCSET stayed empty and every bin QR fell through to "add new
+   item". Learning them from the labels themselves needs no published data and no
+   change to the Excel side. */
+let LEARNED_BINS = [];
+try{ LEARNED_BINS = JSON.parse(localStorage.getItem('scanpwa_learned_bins')||'[]'); }catch(e){}
+function learnBin(name){
+  const n = (name||'').trim();
+  if(!n || LOCSET.has(n.toLowerCase())) return false;
+  LOCATIONS.push(n); LOCSET.add(n.toLowerCase());
+  if(!LEARNED_BINS.includes(n)){
+    LEARNED_BINS.push(n);
+    localStorage.setItem('scanpwa_learned_bins', JSON.stringify(LEARNED_BINS));
+  }
+  return true;
+}
+for(const b of LEARNED_BINS){
+  if(!LOCSET.has(b.toLowerCase())){ LOCATIONS.push(b); LOCSET.add(b.toLowerCase()); }
+}
+/* Every bin label carries at least one letter; a UPC, EAN or LEGO set number is
+   pure digits. That is what lets us ask the right question about an unrecognised
+   scan instead of assuming it is a new product. (No real bin name belongs in this
+   file — it is published; build_shell.py asserts on exactly that.) */
+const looksLikeBin = c => /[A-Za-z]/.test(c||'') && !isFnsku(c);
 /* Bins can also be learned from the catalog CSV's Bin Location column — this is
    what lets the hosted shell ship with no embedded data yet still recognize
    every bin, and it picks up renamed/new bins without a redeploy. */
@@ -856,6 +884,17 @@ function handleScan(code){
        label we haven't met yet. Link it once and it's known forever, instead of
        being dumped into the New SKUs queue where it doesn't belong. */
     if(isFnsku(code)){ linkFnsku(code.toUpperCase()); return; }
+    /* Might be a bin label this device hasn't met yet — ask rather than assume,
+       because guessing wrong either loses a scan or pollutes the New SKUs queue. */
+    if(looksLikeBin(code)){
+      if(confirm('"'+code+'" is not in the catalogue.\n\nIs it a BIN label?\n\n'+
+                 'OK = it is a bin (remember it on this phone)\n'+
+                 'Cancel = it is a new item')){
+        learnBin(code);
+        assignBin(code);
+        return;
+      }
+    }
     openAddItem(code);
     return;
   }
@@ -1182,16 +1221,26 @@ function camDecode(code){
   /* item */
   const p = IDX[code] || IDX[code.toUpperCase()];
   if(!p){
-    /* unknown item while camera-scanning: close the camera and pop the add-item
-       sheet prefilled (can't stack two sheets). Tap Camera again to resume. */
+    /* unknown code while camera-scanning: close the camera first — a prompt or the
+       add-item sheet can't stack on the live view. Tap Camera again to resume. */
     vibrate([80,60,80]);
     stopCam();
+    if(isFnsku(code)){ linkFnsku(code.toUpperCase()); return; }
+    if(looksLikeBin(code)){
+      if(confirm('"'+code+'" is not in the catalogue.\n\nIs it a BIN label?\n\n'+
+                 'OK = it is a bin (remember it on this phone)\n'+
+                 'Cancel = it is a new item')){
+        learnBin(code);
+        assignBin(code);
+        return;
+      }
+    }
     openAddItem(code);
     return;
   }
   const need = needs();
   if(need){ vibrate([60]); camStatus('warn', '⚠ Set the '+need.toUpperCase()+' bin first'); return; }
-  const row = addItem(p);
+  const row = addItem(p, code);
   camLastRowId = row.id;
   camStatusRow(row);
 }
