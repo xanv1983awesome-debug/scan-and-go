@@ -397,10 +397,16 @@ svg{display:block}
     </div>
     <div class="catactions">
       <button class="primary" onclick="document.getElementById('fileInput').click()">Load Data_master.csv&hellip;</button>
+      <button class="primary" onclick="document.getElementById('binsInput').click()">Load bins.csv&hellip;</button>
       <button onclick="resetCatalog()">Use built-in snapshot</button>
       <button onclick="clearLocalAdditions()">Clear locally-added items</button>
     </div>
+    <div class="note" style="padding:0 16px 12px">Bins come from <b>bins.csv</b>
+      (run <b>Tools\export_bins.py</b>) — the same Setting-sheet list the printed QR
+      labels are made from. Loading it makes the bin QR labels scan and fills the
+      bin picker so you can type a bin instead.</div>
     <input type="file" id="fileInput" accept=".csv">
+    <input type="file" id="binsInput" accept=".csv" style="display:none">
   </div>
 </div>
 
@@ -550,7 +556,8 @@ function parseShipmentCSV(text){
   if(!rows.length) return [];
   const hdr = rows[0].map(h=>h.trim().toLowerCase());
   const ci = n => hdr.indexOf(n);
-  const cF=ci('fnsku'), cA=ci('asin'), cS=ci('sku'), cN=ci('product name'), cE=ci('expected');
+  const cF=ci('fnsku'), cA=ci('asin'), cS=ci('sku'), cN=ci('product name'),
+        cE=ci('expected'), cB=ci('bin');
   if(cF<0 && cA<0) throw new Error('needs at least an FNSKU or ASIN column');
   const out = [];
   for(let r=1;r<rows.length;r++){
@@ -558,9 +565,16 @@ function parseShipmentCSV(text){
     if(!row || row.every(v=>!v||!v.trim())) continue;
     const g = i => i>=0 ? (row[i]||'').trim() : '';
     out.push({f:g(cF).toUpperCase(), a:g(cA).toUpperCase(), s:g(cS),
-              n:g(cN), e:parseInt(g(cE)||'0',10)||0});
+              n:g(cN), e:parseInt(g(cE)||'0',10)||0, b:g(cB)});
   }
   return out;
+}
+/* A pick list may name several bins for one SKU ("T5; Lego Clear Box 1") when the
+   stock is split. Any of them is a correct place to pick from. */
+function binMatches(expected, actual){
+  if(!expected || !actual) return true;
+  return expected.split(/[;,]/).map(s=>s.trim().toLowerCase())
+                 .filter(Boolean).includes(actual.trim().toLowerCase());
 }
 
 function buildIndex(cat){
@@ -608,6 +622,14 @@ const LOCSET = new Set(LOCATIONS.map(l=>l.toLowerCase()));
    change to the Excel side. */
 let LEARNED_BINS = [];
 try{ LEARNED_BINS = JSON.parse(localStorage.getItem('scanpwa_learned_bins')||'[]'); }catch(e){}
+/* Bins loaded in bulk from bins.csv (Tools\export_bins.py) — the same Setting-sheet
+   Location column the printed QR labels come from, so the list and the labels can
+   never disagree. This is the proper fix for the empty bin list; learning one at a
+   time from an unrecognised scan stays as the fallback. */
+try{
+  const saved = JSON.parse(localStorage.getItem('scanpwa_bins')||'null');
+  if(saved && Array.isArray(saved.bins)) for(const b of saved.bins) LEARNED_BINS.push(b);
+}catch(e){}
 function learnBin(name){
   const n = (name||'').trim();
   if(!n || LOCSET.has(n.toLowerCase())) return false;
@@ -626,6 +648,16 @@ for(const b of LEARNED_BINS){
    scan instead of assuming it is a new product. (No real bin name belongs in this
    file — it is published; build_shell.py asserts on exactly that.) */
 const looksLikeBin = c => /[A-Za-z]/.test(c||'') && !isFnsku(c);
+
+/* The FBA destination. Prefer the location named exactly "FBA" over "FBA1 box" /
+   "FBM", which a loose /fba/ match would hit first depending on list order. If the
+   bin list hasn't been loaded yet, fall back to the literal so Pick/Pack modes
+   still default their destination instead of starting blank. */
+function fbaBin(){
+  return LOCATIONS.find(l=>l.toLowerCase()==='fba')
+      || LOCATIONS.find(l=>/^fba\b/i.test(l))
+      || 'FBA';
+}
 /* Bins can also be learned from the catalog CSV's Bin Location column — this is
    what lets the hosted shell ship with no embedded data yet still recognize
    every bin, and it picks up renamed/new bins without a redeploy. */
@@ -761,6 +793,40 @@ document.getElementById('fileInput').addEventListener('change', e=>{
   rd.readAsText(f);
   e.target.value='';
 });
+/* bins.csv: one "Bin" column (plus an ignored "Type"). Kept separate from the
+   catalog because bins change on a different rhythm to products. */
+function parseBinsCSV(text){
+  const rows = csvRows(text);
+  if(!rows.length) return [];
+  const hdr = rows[0].map(h=>h.trim().toLowerCase());
+  let ci = hdr.indexOf('bin');
+  if(ci < 0) ci = hdr.indexOf('location');
+  if(ci < 0) throw new Error('needs a "Bin" (or "Location") column');
+  const out = [];
+  for(let r=1;r<rows.length;r++){
+    const v = (rows[r][ci]||'').trim();
+    if(v) out.push(v);
+  }
+  return out;
+}
+document.getElementById('binsInput').addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = ev=>{
+    try{
+      const bins = parseBinsCSV(ev.target.result);
+      if(!bins.length){ alert('No bins found in that file.'); return; }
+      localStorage.setItem('scanpwa_bins', JSON.stringify({bins, loadedAt:new Date().toISOString()}));
+      let added = 0;
+      for(const b of bins) if(learnBin(b)) added++;
+      renderBins(); renderCatMeta();
+      flash('ok', 'Bins loaded', bins.length+' bins ('+added+' new) — QR labels and the picker now work', '', 'box');
+    }catch(err){ alert('Could not read that CSV: '+err); }
+  };
+  rd.readAsText(f);
+  e.target.value='';
+});
+
 function resetCatalog(){
   localStorage.removeItem('scanpwa_catalog');
   ACTIVE_CATALOG = CATALOG; CATALOG_SOURCE='snapshot'; CATALOG_LOADED_AT=SNAPSHOT_DATE;
@@ -812,7 +878,7 @@ function setMode(m){
   mode = m;
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on', t.dataset.m===m));
   fromBin = MODES[m].fromDefault;
-  toBin = (m==='fba'||m==='pack') ? (LOCATIONS.find(l=>/fba/i.test(l))||'') : '';
+  toBin = (m==='fba'||m==='pack') ? fbaBin() : '';
   document.getElementById('boxBar').style.display = (m==='pack') ? '' : 'none';
   document.getElementById('dimBar').style.display = (m==='pack') ? '' : 'none';
   renderBins(); focusScan();
@@ -982,7 +1048,16 @@ function addItem(p, code){
       flash('err', p.n, 'OVER-PACKED: '+done+' of '+ship.e+' expected', row.qty);
       vibrate([90,60,90]); renderTape(); return row;
     }
-    flash('ok', p.n, where+'  ·  '+done+'/'+ship.e, row.qty);
+    /* Wrong-shelf check: the pick list says where this SKU lives. Picking it from
+       somewhere else usually means the wrong item is in your hand, or the bin
+       record is stale — either way you want to know now, not at reconciliation. */
+    if(!binMatches(ship.b, fromBin)){
+      flash('warn', p.n, 'Expected in '+ship.b+', picked from '+(fromBin||'—')+
+            '  ·  '+done+'/'+ship.e, row.qty);
+      vibrate([60,40,60]); renderTape(); return row;
+    }
+    const left = ship.e - done;
+    flash('ok', p.n, where+'  ·  '+done+'/'+ship.e+(left===0?'  ✓ complete':''), row.qty);
     vibrate([25]); renderTape(); return row;
   }
   if(asinOnly) flash('warn', p.n, 'No UPC/Ref# — only an ASIN. Verify manually before import.', row.qty);
