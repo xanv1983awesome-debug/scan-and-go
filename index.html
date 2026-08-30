@@ -506,8 +506,8 @@ document.querySelector('#newItemSheet .eb2').innerHTML = ICONS.x+'Cancel';
    keep APP_VERSION equal to the service-worker cache suffix (build_shell.py --repo
    writes it into the repo's sw.js for you). The version shows in the app bar so a
    stale install is visible at a glance instead of being guessed at. */
-const APP_VERSION = "v14";
-const APP_UPDATED = "2026-08-29";
+const APP_VERSION = "v15";
+const APP_UPDATED = "2026-08-30";
 
 const SNAPSHOT_DATE = "2026-06-27T00:00:00Z";
 const CATALOG = [];  // shell build: catalog is never published — load Data_master.csv on-device
@@ -829,11 +829,25 @@ document.getElementById('fileInput').addEventListener('change', e=>{
       const loadedAt = new Date().toISOString();
       localStorage.setItem('scanpwa_catalog', JSON.stringify({items, loadedAt}));
       ACTIVE_CATALOG = items; CATALOG_SOURCE='refreshed'; CATALOG_LOADED_AT=loadedAt;
+      /* v15: auto-graduate on-device quick-adds. A local addition whose identifier
+         now appears in the loaded catalog has been entered in Excel - keeping the
+         stub SHADOWS the richer catalog row in the index (UPC scans hit a no-ASIN,
+         sometimes unnamed stub while the ref# still finds the real row - the
+         08-30 "no name" mystery, 24 stale stubs deep). Same test clears the
+         pending-Excel queue rows that have landed. */
+      const inCat = new Set();
+      for(const it of items) for(const k of [it.u, it.r, it.a]) if(k) inCat.add(String(k).toUpperCase());
+      const knows = o => [o.u||o.upc, o.r||o.ref].some(k => k && inCat.has(String(k).toUpperCase()));
+      const beforeLocal = LOCAL_ADDITIONS.length, beforeQueue = NEW_SKUS.length;
+      LOCAL_ADDITIONS = LOCAL_ADDITIONS.filter(o=>!knows(o)); saveLocalAdditions();
+      NEW_SKUS = NEW_SKUS.filter(o=>!knows(o)); saveNewSkus();
+      const pruned = (beforeLocal-LOCAL_ADDITIONS.length) + (beforeQueue-NEW_SKUS.length);
       rebuildIndex(); unionBins(items); renderCatMeta();
       document.getElementById('catCount').textContent = items.length.toLocaleString();
       document.getElementById('catSource').textContent = 'Data_master.csv';
       document.getElementById('catAge').textContent = 'today';
-      flash('ok', 'Catalog refreshed', items.length+' items loaded from '+f.name, '');
+      flash('ok', 'Catalog refreshed', items.length+' items loaded from '+f.name+
+            (pruned ? ' - '+pruned+' on-device stub(s) retired (now in the catalog)' : ''), '');
     }catch(err){ alert('Could not read that CSV: '+err); }
   };
   rd.readAsText(f);
