@@ -506,8 +506,8 @@ document.querySelector('#newItemSheet .eb2').innerHTML = ICONS.x+'Cancel';
    keep APP_VERSION equal to the service-worker cache suffix (build_shell.py --repo
    writes it into the repo's sw.js for you). The version shows in the app bar so a
    stale install is visible at a glance instead of being guessed at. */
-const APP_VERSION = "v15";
-const APP_UPDATED = "2026-08-30";
+const APP_VERSION = "v16";
+const APP_UPDATED = "2026-10-14";
 
 const SNAPSHOT_DATE = "2026-06-27T00:00:00Z";
 const CATALOG = [];  // shell build: catalog is never published — load Data_master.csv on-device
@@ -1600,13 +1600,38 @@ function lastDims(){
   for(let i=used.length-1;i>=0;i--){ const d = BOXDIMS[used[i]]; if(d && d.w) return d; }
   return {};
 }
+/* v16: a box's w/l/h fall back to the nearest EARLIER box that has them - and that
+   fallback is PERSISTED the moment it is shown. Before this the carried-over size was
+   only painted into the inputs: no edit = no change event = nothing saved, so boxes
+   8-12 exported with weight but blank dimensions while the screen showed 38x58x38. */
+function effectiveDims(b){
+  const d = Object.assign({}, BOXDIMS[b] || {});
+  if(!(d.w && d.l && d.h)){
+    const used = boxesUsed();
+    for(let i = used.indexOf(b) - 1; i >= 0; i--){
+      const p = BOXDIMS[used[i]];
+      if(p && p.w && p.l && p.h){
+        if(!d.w) d.w = p.w; if(!d.l) d.l = p.l; if(!d.h) d.h = p.h;
+        break;
+      }
+    }
+  }
+  return d;
+}
 function openBoxDims(){
   const used = boxesUsed();
   const host = document.getElementById('boxDimsBody');
   if(!used.length){
     host.innerHTML = '<div class="exportbody">Nothing packed yet — scan items into a box first.</div>';
   } else {
-    const prev = lastDims();
+    let persisted = false;
+    for(const b of used){
+      const eff = effectiveDims(b), own = BOXDIMS[b] || {};
+      if((eff.w && !own.w) || (eff.l && !own.l) || (eff.h && !own.h)){
+        BOXDIMS[b] = Object.assign({}, own, {w: eff.w, l: eff.l, h: eff.h}); persisted = true;
+      }
+    }
+    if(persisted) saveBoxDims();
     host.innerHTML = used.map(b=>{
       const d = BOXDIMS[b] || {};
       const units = rows.filter(r=>r.box===b).reduce((n,r)=>n+r.qty,0);
@@ -1614,7 +1639,7 @@ function openBoxDims(){
         DIM_FIELDS.map(([k,lbl])=>
           '<label class="dimf"><span>'+lbl+'</span>'+
           '<input type="number" inputmode="decimal" step="0.1" min="0" data-box="'+b+'" data-k="'+k+'" '+
-          'value="'+(d[k]!==undefined&&d[k]!==''?d[k]:(k==='kg'?'':(prev[k]||'')))+'"></label>').join('')+
+          'value="'+(d[k]!==undefined&&d[k]!==''?d[k]:'')+'"></label>').join('')+
         '</div>';
     }).join('');
     host.querySelectorAll('input').forEach(inp=>{
@@ -1634,7 +1659,7 @@ const WEIGHT_HEADERS = ["box","weight_kg","width_cm","length_cm","height_cm"];
 function buildWeightsCSV(){
   const lines = [WEIGHT_HEADERS.join(',')];
   for(const b of boxesUsed()){
-    const d = BOXDIMS[b] || {};
+    const d = effectiveDims(b);
     lines.push([b, d.kg||'', d.w||'', d.l||'', d.h||''].join(','));
   }
   return lines.join('\r\n');
@@ -1791,8 +1816,7 @@ document.getElementById('btnExport').onclick = ()=>{
   const wb2 = document.getElementById('weightBlock');
   if(packed.length){
     const used = boxesUsed();
-    const missing = used.filter(b=>!(BOXDIMS[b] && BOXDIMS[b].kg && BOXDIMS[b].w &&
-                                     BOXDIMS[b].l && BOXDIMS[b].h));
+    const missing = used.filter(b=>{ const d = effectiveDims(b); return !(d.kg && d.w && d.l && d.h); });
     wb2.style.display = '';
     document.getElementById('weightSummary').innerHTML =
       used.length+' box(es).'+
