@@ -49,6 +49,14 @@ svg{display:block}
 .appbar .addbtn{width:30px;height:30px;border-radius:9px;background:var(--panel2);border:1px solid var(--line-soft);
   color:var(--mut);display:flex;align-items:center;justify-content:center;flex:none}
 .appbar .addbtn svg{width:15px;height:15px}
+/* v17: door to the separate Stock Count page. Blue, not the app's orange, because
+   it leaves this app: counting is a different job and must never be done in a tab. */
+.appbar .countbtn{height:30px;border-radius:9px;background:var(--panel2);border:1px solid var(--blue);
+  color:var(--blue);display:flex;align-items:center;padding:0 10px;font-size:12px;font-weight:700;
+  flex:none;text-decoration:none}
+/* The extra button does not fit beside the logo on a narrow phone (the title wrapped
+   to two lines at 375 px), so the decorative logo steps aside there. */
+@media (max-width:400px){.appbar .mark{display:none}}
 .newitembody{padding:2px 18px 6px}
 .newitembody label{display:block;font-size:10.5px;color:var(--mut2);text-transform:uppercase;
   letter-spacing:.1em;font-weight:700;margin:12px 0 5px}
@@ -247,6 +255,7 @@ svg{display:block}
 <div class="appbar">
   <div class="mark"></div>
   <div class="title">Scan &amp; Go<span class="ver" id="appVer"></span></div>
+  <a class="countbtn" href="count.html" title="Stock count (separate page)">Count</a>
   <button class="addbtn" id="btnAddItem" title="Add new item"></button>
   <div class="catmeta" id="catMeta" onclick="openCatalog()"></div>
 </div>
@@ -506,8 +515,8 @@ document.querySelector('#newItemSheet .eb2').innerHTML = ICONS.x+'Cancel';
    keep APP_VERSION equal to the service-worker cache suffix (build_shell.py --repo
    writes it into the repo's sw.js for you). The version shows in the app bar so a
    stale install is visible at a glance instead of being guessed at. */
-const APP_VERSION = "v16";
-const APP_UPDATED = "2026-10-14";
+const APP_VERSION = "v17";
+const APP_UPDATED = "2026-11-21";
 
 const SNAPSHOT_DATE = "2026-06-27T00:00:00Z";
 const CATALOG = [];  // shell build: catalog is never published — load Data_master.csv on-device
@@ -908,6 +917,7 @@ function parseStockCSV(text){
     throw new Error('needs Ref/UPC/ASIN + Bin + Qty columns - is it really stock.csv?');
   const byItem = {};   // canonical key -> [{b,q}]
   const idx = {};      // every identifier (as-is + uppercase) -> that same array
+  const flat = [];     // v17: plain [ref,upc,asin,bin,qty] rows, read by the Stock Count page
   let n = 0;
   for(let r=1;r<rws.length;r++){
     const row = rws[r];
@@ -922,11 +932,12 @@ function parseStockCSV(text){
     if(!canon) continue;
     const list = byItem[canon] || (byItem[canon]=[]);
     list.push({b:bin, q:q});
+    flat.push([ref, upc, asin, bin, q]);
     n++;
     for(const k of [ref,upc,asin]) if(k){ idx[k]=list; idx[k.toUpperCase()]=list; }
   }
   if(!n) throw new Error('no positive stock rows found');
-  return {idx:idx, n:n};
+  return {idx:idx, n:n, rows:flat};
 }
 document.getElementById('stockInput').addEventListener('change', e=>{
   const f = e.target.files[0]; if(!f) return;
@@ -935,7 +946,7 @@ document.getElementById('stockInput').addEventListener('change', e=>{
     try{
       const s = parseStockCSV(ev.target.result);
       STOCK_IDX = s.idx; STOCK_ROWS = s.n; STOCK_LOADED_AT = new Date().toISOString();
-      try{ localStorage.setItem('scanpwa_stock', JSON.stringify({idx:STOCK_IDX, n:STOCK_ROWS, loadedAt:STOCK_LOADED_AT})); }catch(e2){}
+      try{ localStorage.setItem('scanpwa_stock', JSON.stringify({idx:STOCK_IDX, n:STOCK_ROWS, loadedAt:STOCK_LOADED_AT, rows:s.rows})); }catch(e2){}
       renderStockMeta();
       flash('ok', 'Ledger stock loaded', STOCK_ROWS+' item-bin balances - Receive tab now warns on items the ledger already holds', '');
     }catch(err){ alert('Could not read that CSV: '+(err.message||err)); }

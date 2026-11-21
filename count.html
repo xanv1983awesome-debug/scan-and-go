@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1115">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Stock Count</title>
+<style>
+/* House tokens (internal-tool-starter). Blue accent on purpose: Scan & Go is
+   orange, so a glance tells you which page you are on. This page only COUNTS.
+   It never writes a receive, a move or a pack line. */
+:root{
+  --accent:#4d9fff; --accent-ink:#04101f;
+  --bg:#0f1115; --card:#1a1e26; --card2:#222c3d; --line:#2a303c;
+  --ink:#e8eaf0; --mut:#8b93a3;
+  --ok:#3ddc84; --warn:#ffb020; --danger:#ff6b6b;
+  --r:14px;
+}
+@media (prefers-color-scheme: light){:root{
+  --bg:#f4f5f8; --card:#fff; --card2:#eef1f5; --line:#e3e6ec;
+  --ink:#171a20; --mut:#69707f;
+  --ok:#0a9d55; --warn:#b97300; --danger:#d1373b;
+  --accent:#1668d6; --accent-ink:#fff;
+}}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,system-ui,"Segoe UI",Roboto,sans-serif;
+  font-size:15px;line-height:1.35;max-width:560px;margin:0 auto;
+  padding:0 0 calc(96px + env(safe-area-inset-bottom));overflow-x:hidden}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input{font:inherit;color:inherit}
+a{color:var(--accent);text-decoration:none}
+
+.top{position:sticky;top:0;z-index:5;background:var(--accent);color:var(--accent-ink);
+  padding:calc(10px + env(safe-area-inset-top)) 14px 10px;display:flex;align-items:center;gap:10px}
+.top a{color:var(--accent-ink);font-size:13px;font-weight:600;opacity:.9;white-space:nowrap}
+.top .ttl{flex:1;font-size:16px;font-weight:800;letter-spacing:-.01em;text-align:center;white-space:nowrap}
+.top .ttl small{font-size:10.5px;font-weight:600;opacity:.75;margin-left:5px}
+.top button{color:var(--accent-ink);font-size:13px;font-weight:700;padding:6px 10px;border-radius:9px;
+  background:rgba(0,0,0,.14)}
+#view{padding:14px}
+
+.hero{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.hero .big{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.hero .sub{color:var(--mut);font-size:12.5px;margin-top:6px}
+.prog{height:8px;border-radius:6px;background:var(--card2);margin-top:10px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent);border-radius:6px}
+
+.note{border-radius:12px;padding:10px 12px;font-size:13px;margin-top:10px;border:1px solid var(--line);background:var(--card)}
+.note.warn{border-color:var(--warn)} .note.warn b{color:var(--warn)}
+.note.bad{border-color:var(--danger)} .note.bad b{color:var(--danger)}
+
+.btn{display:block;width:100%;min-height:50px;border-radius:13px;font-weight:700;font-size:15.5px;
+  background:var(--card);border:1px solid var(--line);margin-top:10px;padding:10px 12px;text-align:center}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--danger)}
+.btn:active{filter:brightness(.92)}
+.two{display:flex;gap:10px} .two .btn{flex:1}
+
+h2{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:20px 2px 8px;font-weight:700}
+.list{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.item{display:flex;align-items:center;gap:10px;padding:11px 12px;border-top:1px solid var(--line);min-height:50px}
+.item:first-child{border-top:0}
+.item .nm{flex:1;min-width:0}
+.item .nm b{display:block;font-weight:650;overflow-wrap:anywhere}
+.item .nm span{display:block;color:var(--mut);font-size:12px;overflow-wrap:anywhere}
+.item.tap{cursor:pointer} .item.tap:active{background:var(--card2)}
+.chip{font-size:11.5px;font-weight:700;border-radius:20px;padding:3px 9px;white-space:nowrap;border:1px solid var(--line);color:var(--mut)}
+.chip.ok{color:var(--ok);border-color:var(--ok)} .chip.warn{color:var(--warn);border-color:var(--warn)}
+.chip.bad{color:var(--danger);border-color:var(--danger)} .chip.go{color:var(--accent);border-color:var(--accent)}
+
+.binhead{background:var(--card);border:2px solid var(--accent);border-radius:var(--r);padding:12px 14px}
+.binhead .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:800}
+.binhead .name{font-size:21px;font-weight:800;letter-spacing:-.02em;overflow-wrap:anywhere;margin-top:2px}
+.binhead .sub{color:var(--mut);font-size:12.5px;margin-top:4px}
+
+.fb{border-radius:12px;padding:10px 12px;margin-top:10px;border:1px solid var(--line);background:var(--card);min-height:52px;
+  display:flex;align-items:center;gap:10px}
+.fb .t{flex:1;min-width:0} .fb .t b{display:block;overflow-wrap:anywhere} .fb .t span{display:block;font-size:12.5px;color:var(--mut)}
+.fb.ok{border-color:var(--ok)} .fb.warn{border-color:var(--warn)} .fb.bad{border-color:var(--danger)}
+.fb.ok .t b::before{content:"\2713  ";color:var(--ok)}
+.fb.warn .t b::before{content:"!  ";color:var(--warn);font-weight:900}
+.fb.bad .t b::before{content:"\2715  ";color:var(--danger)}
+
+.qty{display:flex;align-items:center;gap:4px;flex:none}
+.qty button{width:40px;height:40px;border-radius:11px;background:var(--card2);border:1px solid var(--line);font-size:20px;font-weight:700;line-height:1}
+.qty .n{min-width:46px;height:40px;border-radius:11px;border:1px solid var(--line);background:var(--bg);
+  font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;text-align:center;padding:0 6px}
+
+.typed{display:flex;gap:8px;margin-top:10px}
+.typed input{flex:1;min-width:0;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--card);padding:0 12px;font-size:15px}
+.typed button{height:46px;border-radius:12px;padding:0 16px;font-weight:700;background:var(--card2);border:1px solid var(--line)}
+
+.foot{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--bg);border-top:1px solid var(--line);
+  padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+.foot .in{max-width:532px;margin:0 auto;display:flex;gap:10px}
+.foot .btn{margin:0;flex:1} .foot .btn.small{flex:0 0 34%}
+
+.num{font-variant-numeric:tabular-nums;font-weight:800;white-space:nowrap}
+.num.neg{color:var(--danger)} .num.pos{color:var(--warn)}
+.muted{color:var(--mut);font-size:12.5px}
+
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center}
+.sheet.open{display:flex}
+.sheet.top2{z-index:30}
+.sheet .box{background:var(--bg);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;
+  padding:14px 14px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+.sheet .hd{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sheet .hd b{flex:1;font-size:16px}
+.sheet .hd button{font-weight:700;color:var(--accent);padding:6px 4px}
+.sheet p{font-size:13.5px;color:var(--mut);margin:6px 0 2px;white-space:pre-line}
+#reader{width:100%;border-radius:12px;overflow:hidden;background:#000;min-height:220px}
+#reader video{width:100% !important}
+.field{width:100%;height:56px;border-radius:13px;border:1px solid var(--line);background:var(--card);padding:0 14px;
+  font-size:24px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums}
+.search{width:100%;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);padding:0 12px;margin-bottom:10px}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <a href="./" id="backLink">&lsaquo; Scan &amp; Go</a>
+  <div class="ttl">Stock Count<small id="ver"></small></div>
+  <button id="btnMenu" data-act="menu">Menu</button>
+</div>
+
+<div id="view"></div>
+<div class="foot" id="foot" style="display:none"><div class="in" id="footIn"></div></div>
+
+<!-- camera -->
+<div class="sheet" id="camSheet"><div class="box">
+  <div class="hd"><b id="camTitle">Camera</b><button data-act="camdone">Done</button></div>
+  <div id="reader"></div>
+  <div class="fb" id="camFb"><div class="t"><b>Ready</b><span>Point at a label or a barcode</span></div></div>
+</div></div>
+
+<!-- generic sheet: bin picker, export, menu -->
+<div class="sheet" id="genSheet"><div class="box">
+  <div class="hd"><b id="genTitle"></b><button data-act="genclose">Close</button></div>
+  <div id="genBody"></div>
+</div></div>
+
+<!-- quantity -->
+<div class="sheet top2" id="qtySheet"><div class="box">
+  <div class="hd"><b id="qtyTitle">Quantity</b><button data-act="qtycancel">Cancel</button></div>
+  <input class="field" id="qtyInput" type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1">
+  <p>Type how many are in this bin. 0 removes the line.</p>
+  <button class="btn primary" data-act="qtyok">Set quantity</button>
+</div></div>
+
+<!-- question (used instead of confirm(), so it can sit on top of the camera) -->
+<div class="sheet top2" id="askSheet"><div class="box">
+  <div class="hd"><b id="askTitle"></b></div>
+  <p id="askBody"></p>
+  <div id="askBtns"></div>
+</div></div>
+
+<input type="file" id="stockInput" accept=".csv,text/csv" style="display:none">
+
+<!-- vendored locally (was cdnjs): self-contained, offline-capable, no third-party runtime dependency.
+     Bytes verified against cdnjs SRI sha512-r6rDA7W6ZeQhvl8S7yRVQUKVHdexq+GAlNkNNqVC7YyIV+NwqCTJe2hDWCiffTyRNOeGEzRRJ9ifvRm/HCzGYg== -->
+<script src="./vendor/html5-qrcode.min.js"></script>
+<script>
+"use strict";
+/* ============================================================================
+   Stock Count: a separate page from Scan & Go, same origin.
+   READS  the catalog, bin list and ledger stock that Scan & Go keeps in
+          localStorage (scanpwa_*), so nothing is loaded twice.
+   WRITES only its own key (scancount_v1), plus scanpwa_stock when stock.csv is
+          loaded here and scanpwa_learned_bins when a new bin label is confirmed.
+   No product data and no bin names live in this file. It is published.
+   ========================================================================== */
+const COUNT_VERSION = "c1";
+const KEY = "scancount_v1";
+const $ = id => document.getElementById(id);
+const up = s => String(s == null ? "" : s).toUpperCase();
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function readJSON(k, d){ try{ const v = JSON.parse(localStorage.getItem(k) || "null"); return v == null ? d : v; }catch(e){ return d; } }
+function pad(n){ return String(n).padStart(2, "0"); }
+function localStamp(d){ d = d || new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+" "+pad(d.getHours())+":"+pad(d.getMinutes()); }
+function ageOf(iso){
+  if(!iso) return "";
+  const h = (Date.now() - new Date(iso).getTime()) / 3600000;
+  if(h < 1) return "less than an hour ago"; if(h < 36) return Math.round(h)+" hours ago";
+  return Math.round(h/24)+" days ago";
+}
+const natcmp = (a, b) => String(a).localeCompare(String(b), undefined, {numeric:true, sensitivity:"base"});
+const isFnsku = c => /^X00[A-Z0-9]{7}$/i.test(String(c||"").trim());
+const looksLikeBin = c => /[A-Za-z]/.test(c||"") && !isFnsku(c);
+
+/* ---------------- shared data ---------------- */
+let CAT = [], CAT_AT = null;
+let BY_REF = new Map(), BY_UPC = new Map(), BY_ASIN = new Map(), FNSKU = {};
+let BINSET = new Map();            // lower-case name -> name as printed
+let EXP = new Map();               // bin (lower) -> Map(item key -> ledger qty)
+let WHERE = new Map();             // item key -> [{b, q}]
+let INFO = new Map();              // item key -> {r, u, a}
+let STOCK_AT = null, STOCK_N = 0, STOCK_DERIVED = false;
+
+/* The item key is the same one the workbook uses: Reference#, else UPC, else
+   ASIN, taken from the FIRST catalog row that matches. Excel's import and
+   phone_files.py both resolve that way, so counted and ledger numbers meet on
+   the same key even when several catalog rows share one barcode. */
+const keyOf = p => p.r || p.u || p.a || "";
+function resolve(code){
+  const c = String(code || "").trim(); if(!c) return null;
+  const U = up(c);
+  let p = BY_REF.get(U) || BY_UPC.get(U) || BY_ASIN.get(U);
+  if(!p && /^\d{13}$/.test(c) && c[0] === "0") p = BY_UPC.get(c.slice(1));
+  if(!p && /^\d{12}$/.test(c)) p = BY_UPC.get("0" + c);
+  if(!p && FNSKU[U]) p = BY_ASIN.get(up(FNSKU[U]));
+  if(!p && INFO.has(c)){ const i = INFO.get(c); p = {n:"(in the ledger, not in the catalog) " + c, r:i.r, u:i.u, a:i.a}; }
+  return p || null;
+}
+function nameOf(k){
+  const p = BY_REF.get(up(k)) || BY_UPC.get(up(k)) || BY_ASIN.get(up(k));
+  return p && p.n ? p.n : "(not in the catalog) " + k;
+}
+function addBin(b){ b = String(b || "").trim(); if(b && !BINSET.has(b.toLowerCase())) BINSET.set(b.toLowerCase(), b); }
+
+function loadShared(){
+  const c = readJSON("scanpwa_catalog", null);
+  CAT = (c && Array.isArray(c.items)) ? c.items : [];
+  CAT_AT = (c && c.loadedAt) || null;
+  let extra = readJSON("scanpwa_local_additions", []); if(!Array.isArray(extra)) extra = [];
+  FNSKU = readJSON("scanpwa_fnsku_map", {}) || {};
+  BY_REF = new Map(); BY_UPC = new Map(); BY_ASIN = new Map();
+  for(const p of CAT.concat(extra)){
+    if(!p) continue;
+    if(p.r && !BY_REF.has(up(p.r))) BY_REF.set(up(p.r), p);
+    if(p.u && !BY_UPC.has(up(p.u))) BY_UPC.set(up(p.u), p);
+    if(p.a && !BY_ASIN.has(up(p.a))) BY_ASIN.set(up(p.a), p);
+  }
+  BINSET = new Map();
+  const sb = readJSON("scanpwa_bins", null);
+  if(sb && Array.isArray(sb.bins)) sb.bins.forEach(addBin);
+  const lb = readJSON("scanpwa_learned_bins", []); if(Array.isArray(lb)) lb.forEach(addBin);
+  for(const p of CAT) if(p && p.b) addBin(p.b);
+  loadStock();
+  for(const m of EXP.keys()) addBin(EXPNAME.get(m));
+  for(const k in S.bins) addBin(S.bins[k].name);
+}
+
+let EXPNAME = new Map();
+function loadStock(){
+  EXP = new Map(); EXPNAME = new Map(); WHERE = new Map(); INFO = new Map(); UPCKEYS = new Map();
+  STOCK_AT = null; STOCK_N = 0; STOCK_DERIVED = false;
+  const s = readJSON("scanpwa_stock", null);
+  if(!s) return;
+  /* Scan & Go v16 and older saved only a lookup index, where one stock line sits
+     under several identifiers. Turning that back into lines double-counts items
+     that share a barcode (tested: 17 extra lines on real data), so it is not used.
+     STOCK_DERIVED means "stock is on the phone, but load it again once". */
+  if(!Array.isArray(s.rows)){ STOCK_DERIVED = true; return; }
+  STOCK_AT = s.loadedAt || null;
+  for(const row of s.rows){
+    const ref = String(row[0]||"").trim(), upc = String(row[1]||"").trim(), asin = String(row[2]||"").trim();
+    const bin = String(row[3]||"").trim(), q = parseFloat(row[4]);
+    const k = ref || upc || asin;
+    if(!k || !bin || !(q > 0)) continue;
+    const bl = bin.toLowerCase();
+    if(!EXP.has(bl)){ EXP.set(bl, new Map()); EXPNAME.set(bl, bin); }
+    const m = EXP.get(bl); m.set(k, (m.get(k) || 0) + q);
+    if(!WHERE.has(k)) WHERE.set(k, []);
+    WHERE.get(k).push({b:bin, q:q});
+    if(!INFO.has(k)){
+      INFO.set(k, {r:ref, u:upc, a:asin});
+      if(upc){ const U = up(upc); if(!UPCKEYS.has(U)) UPCKEYS.set(U, []); UPCKEYS.get(U).push(k); }
+    }
+    STOCK_N++;
+  }
+}
+/* The catalog has a few products entered twice (two rows, one barcode). A scan
+   cannot tell them apart, so when the ledger holds this bin's stock under the
+   OTHER row, count it there. Otherwise one product shows up as "missing" under
+   one name and "not expected" under the other (4 lines on real data). Only done
+   when exactly one row fits, and it never shows the ledger quantity. */
+let UPCKEYS = new Map();           // barcode -> ledger item keys that carry it
+function ledgerKeyInBin(binLower, p, code){
+  const k = keyOf(p), m = EXP.get(binLower);
+  if(!m || m.has(k)) return k;
+  const cands = new Set((UPCKEYS.get(up(p.u)) || []).concat(UPCKEYS.get(up(code)) || []));
+  const here = [...cands].filter(x => x !== k && m.has(x));
+  return here.length === 1 ? here[0] : k;
+}
+function sameBarcodeKeys(k){
+  const i = INFO.get(k), p = BY_REF.get(up(k)) || BY_UPC.get(up(k)) || BY_ASIN.get(up(k));
+  const U = up((i && i.u) || (p && p.u) || "");
+  return U ? [...new Set([k].concat(UPCKEYS.get(U) || []))] : [k];
+}
+
+/* stock.csv can also be loaded here. Saved in the format Scan & Go reads, so its
+   Receive-tab guard gets the same fresh numbers. */
+function csvRows(text){
+  const rows = []; let i = 0, field = "", row = [], inQ = false;
+  const pf = () => { row.push(field); field = ""; }, pr = () => { pf(); rows.push(row); row = []; };
+  while(i < text.length){
+    const c = text[i];
+    if(inQ){ if(c === '"'){ if(text[i+1] === '"'){ field += '"'; i += 2; continue; } inQ = false; i++; continue; } field += c; i++; continue; }
+    if(c === '"'){ inQ = true; i++; continue; }
+    if(c === ","){ pf(); i++; continue; }
+    if(c === "\r"){ i++; continue; }
+    if(c === "\n"){ pr(); i++; continue; }
+    field += c; i++;
+  }
+  if(field.length || row.length) pr();
+  return rows;
+}
+function parseStockCSV(text){
+  const rws = csvRows(text.replace(/^﻿/, ""));
+  if(!rws.length) throw new Error("empty file");
+  const hdr = rws[0].map(h => h.trim().toLowerCase());
+  const cRef = hdr.indexOf("ref"), cUpc = hdr.indexOf("upc"), cAsin = hdr.indexOf("asin"), cBin = hdr.indexOf("bin"), cQty = hdr.indexOf("qty");
+  if(cBin < 0 || cQty < 0 || (cRef < 0 && cUpc < 0 && cAsin < 0)) throw new Error("needs Ref/UPC/ASIN + Bin + Qty columns. Is it really stock.csv?");
+  const byItem = {}, idx = {}, rows = []; let n = 0;
+  for(let r = 1; r < rws.length; r++){
+    const row = rws[r]; if(!row || row.every(v => !v || !v.trim())) continue;
+    const g = i => i >= 0 ? (row[i] || "").trim() : "";
+    const ref = g(cRef), upc = g(cUpc), asin = g(cAsin), bin = g(cBin), q = parseFloat(row[cQty]);
+    if(!bin || !(q > 0)) continue;
+    const canon = ref || upc || asin; if(!canon) continue;
+    const list = byItem[canon] || (byItem[canon] = []);
+    list.push({b:bin, q:q}); rows.push([ref, upc, asin, bin, q]); n++;
+    for(const k of [ref, upc, asin]) if(k){ idx[k] = list; idx[k.toUpperCase()] = list; }
+  }
+  if(!n) throw new Error("no positive stock rows found");
+  return {idx, n, rows};
+}
+
+/* ---------------- count state ---------------- */
+let S = readJSON(KEY, null);
+if(!S || typeof S !== "object" || !S.bins) S = {v:1, session:null, bins:{}, cur:null};
+let view = "home", pendingNext = null, lastLineKey = null, expandMatches = false;
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch(e){ fb("bad", "Could not save on this phone", "The phone is out of space for this page. Export the count now."); }
+}
+function binRec(name){
+  const k = name.toLowerCase();
+  if(!S.bins[k]){
+    if(!S.session) S.session = {id:"C" + localStamp().replace(/[- :]/g, "").replace(/^(\d{8})(\d{4})$/, "$1-$2"), startedAt:new Date().toISOString()};
+    S.bins[k] = {name:name, status:"open", startedAt:localStamp(), doneAt:"", recounts:0, lines:[], exp:null, baseline:""};
+  }
+  return S.bins[k];
+}
+const cur = () => (S.cur && S.bins[S.cur]) || null;
+function expObj(binName){ const m = EXP.get(String(binName).toLowerCase()); const o = {}; if(m) for(const [k, q] of m) o[k] = q; return o; }
+function unitsOf(b){ return b.lines.reduce((n, l) => n + l.qty, 0); }
+
+function diffOf(b){
+  const exp = b.exp || {}, got = {}, meta = {};
+  for(const l of b.lines){ got[l.k] = (got[l.k] || 0) + l.qty; meta[l.k] = l; }
+  const out = {short:[], over:[], unexpected:[], match:[], unknown:[]};
+  for(const k of new Set(Object.keys(exp).concat(Object.keys(got)))){
+    const e = exp[k] || 0, c = got[k] || 0, l = meta[k];
+    const row = {k, e, c, d:c - e, n:l ? l.n : nameOf(k), unk:!!(l && l.unk)};
+    if(row.unk) out.unknown.push(row);
+    else if(c === e) out.match.push(row);
+    else if(e === 0) out.unexpected.push(row);
+    else if(c < e) out.short.push(row);
+    else out.over.push(row);
+  }
+  for(const g in out) out[g].sort((x, y) => natcmp(x.n, y.n));
+  out.nDiff = out.short.length + out.over.length + out.unexpected.length + out.unknown.length;
+  return out;
+}
+
+/* ---------------- feedback ---------------- */
+let actx = null;
+function beep(kind){
+  try{
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.frequency.value = kind === "ok" ? 1040 : 240; g.gain.value = 0.08;
+    o.connect(g); g.connect(actx.destination); o.start();
+    o.stop(actx.currentTime + (kind === "ok" ? 0.07 : 0.22));
+  }catch(e){}
+  /* browsers refuse a buzz before the first tap and log an error each time */
+  if(navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive))
+    navigator.vibrate(kind === "ok" ? 25 : [80, 60, 80]);
+}
+function fbHTML(kind, title, sub, line){
+  let h = '<div class="t"><b>' + esc(title) + "</b>" + (sub ? "<span>" + esc(sub) + "</span>" : "") + "</div>";
+  if(line) h += qtyHTML(line);
+  return h;
+}
+function qtyHTML(l){
+  return '<div class="qty"><button data-act="dec" data-k="' + esc(l.k) + '" aria-label="one less">&minus;</button>' +
+         '<button class="n" data-act="setqty" data-k="' + esc(l.k) + '">' + String(l.qty) + "</button>" +
+         '<button data-act="inc" data-k="' + esc(l.k) + '" aria-label="one more">+</button></div>';
+}
+function fb(kind, title, sub, line){
+  for(const id of ["fbBox", "camFb"]){
+    const el = $(id); if(!el) continue;
+    el.className = "fb " + (kind || ""); el.innerHTML = fbHTML(kind, title, sub, line);
+  }
+  if(kind) beep(kind === "ok" ? "ok" : "bad");
+}
+
+/* ---------------- questions ---------------- */
+function ask(title, body, buttons){
+  $("askTitle").textContent = title; $("askBody").textContent = body || "";
+  const box = $("askBtns"); box.innerHTML = "";
+  buttons.forEach(b => {
+    const el = document.createElement("button");
+    el.className = "btn" + (b.kind ? " " + b.kind : ""); el.textContent = b.label;
+    el.onclick = () => { $("askSheet").classList.remove("open"); if(b.fn) b.fn(); };
+    box.appendChild(el);
+  });
+  $("askSheet").classList.add("open");
+}
+
+/* ---------------- scanning ---------------- */
+function handleScan(raw){
+  const code = String(raw || "").trim(); if(!code) return;
+  if(document.querySelector("#askSheet.open, #qtySheet.open")) return;   // answer the open question first
+  const low = code.toLowerCase();
+  if(BINSET.has(low)){ onBin(BINSET.get(low)); return; }
+  const p = resolve(code);
+  if(view !== "bin" || !cur()){
+    if(p){ fb("warn", "Scan a bin label first", p.n); return; }
+    if(looksLikeBin(code)){ askNewBin(code); return; }
+    fb("warn", "Scan a bin label first", "That code is not a bin on this phone: " + code);
+    return;
+  }
+  if(p){ addCount(p, code); return; }
+  if(isFnsku(code)){
+    ask("FBA label not linked yet", code + "\n\nThis label is not linked to a product on this phone. Scan the product's own barcode instead, or record it as unknown.",
+        [{label:"Record as unknown in this bin", fn:() => addUnknown(code)}, {label:"Skip this scan", kind:"primary"}]);
+    beep("bad"); return;
+  }
+  if(looksLikeBin(code)){ askNewBin(code); return; }
+  ask("Not in the catalog", code + "\n\nRecord it as an unknown item in this bin? It will be listed in the export so it can be looked up later.",
+      [{label:"Record as unknown", kind:"primary", fn:() => addUnknown(code)}, {label:"Skip this scan"}]);
+  beep("bad");
+}
+function askNewBin(code){
+  beep("bad");
+  const btns = [{label:"Yes, it is a bin label", kind:"primary", fn:() => {
+    addBin(code);
+    const lb = readJSON("scanpwa_learned_bins", []); const arr = Array.isArray(lb) ? lb : [];
+    if(!arr.includes(code)){ arr.push(code); try{ localStorage.setItem("scanpwa_learned_bins", JSON.stringify(arr)); }catch(e){} }
+    onBin(code);
+  }}];
+  if(view === "bin" && cur()) btns.push({label:"No, it is an item (record as unknown)", fn:() => addUnknown(code)});
+  btns.push({label:"Skip this scan"});
+  ask("Is this a bin label?", '"' + code + '" is not a known bin or product on this phone.', btns);
+}
+function onBin(name){
+  const k = name.toLowerCase(), c = cur();
+  if(view === "bin" && c && S.cur !== k){
+    ask("Finish " + c.name + " first?", "You are still counting " + c.name + ".",
+        [{label:"Finish it, then open " + name, kind:"primary", fn:() => { pendingNext = name; finishBin(); }},
+         {label:"Keep counting " + c.name}]);
+    beep("bad"); return;
+  }
+  if(view === "bin" && c && S.cur === k){ fb("ok", "Still counting " + c.name, "Scan the items in it"); return; }
+  openBin(name);
+}
+function openBin(name){
+  const k = name.toLowerCase(), existing = S.bins[k];
+  if(existing && existing.status === "done"){ S.cur = k; save(); view = "result"; render(); return; }
+  binRec(name); S.cur = k; save(); view = "bin"; lastLineKey = null; render();
+  fb("ok", name, existing ? "Carry on. " + existing.lines.length + " item(s) counted so far" : "Bin open. Scan every item inside");
+}
+function addCount(p, code){
+  const b = cur(), k = ledgerKeyInBin(S.cur, p, code);
+  let l = b.lines.find(x => x.k === k && !x.unk);
+  if(l) l.qty += 1;
+  else {
+    const i = k === keyOf(p) ? {r:p.r || "", u:p.u || "", a:p.a || ""} : (INFO.get(k) || {r:k, u:"", a:""});
+    l = {k:k, n:k === keyOf(p) ? (p.n || k) : nameOf(k), r:i.r, u:i.u, a:i.a, code:code, qty:1, at:localStamp()};
+    b.lines.push(l);
+  }
+  l.at = localStamp(); lastLineKey = l.k; save(); renderBinBody();
+  fb("ok", l.n, "In this bin: " + l.qty, l);
+}
+function addUnknown(code){
+  const b = cur(); if(!b) return;
+  const k = "?" + code;
+  let l = b.lines.find(x => x.k === k);
+  if(l) l.qty += 1; else { l = {k:k, n:"Unknown item " + code, r:"", u:"", a:"", code:code, qty:1, at:localStamp(), unk:true}; b.lines.push(l); }
+  lastLineKey = k; save(); renderBinBody();
+  fb("warn", l.n, "Recorded as unknown. In this bin: " + l.qty, l);
+}
+function changeQty(k, to){
+  const b = cur(); if(!b) return;
+  const i = b.lines.findIndex(x => x.k === k); if(i < 0) return;
+  const l = b.lines[i];
+  if(to <= 0){ b.lines.splice(i, 1); save(); renderBinBody(); fb("warn", "Removed: " + l.n, "Scan it again to put it back"); return; }
+  l.qty = to; l.at = localStamp(); lastLineKey = k; save(); renderBinBody();
+  fb("ok", l.n, "In this bin: " + l.qty, l);
+}
+function finishBin(){
+  const b = cur(); if(!b) return;
+  stopCam();
+  b.exp = expObj(b.name); b.baseline = STOCK_AT ? localStamp(new Date(STOCK_AT)) : "";
+  b.status = "done"; b.doneAt = localStamp(); save();
+  view = "result"; expandMatches = false; render();
+}
+
+/* ---------------- rendering ---------------- */
+function setFoot(html){ $("foot").style.display = html ? "" : "none"; $("footIn").innerHTML = html || ""; }
+function render(){
+  $("ver").textContent = COUNT_VERSION;
+  if(view === "bin" && cur()) renderBin();
+  else if(view === "result" && cur()) renderResult();
+  else { view = "home"; renderHome(); }
+  window.scrollTo(0, 0);
+}
+function binChip(b){
+  if(b.status !== "done") return '<span class="chip go">in progress</span>';
+  const d = diffOf(b);
+  if(!STOCK_AT && !Object.keys(b.exp || {}).length) return '<span class="chip">counted</span>';
+  return d.nDiff ? '<span class="chip warn">' + d.nDiff + " to check</span>" : '<span class="chip ok">matches</span>';
+}
+function renderHome(){
+  const recs = Object.values(S.bins);
+  const open = recs.filter(b => b.status !== "done").sort((a, b) => natcmp(a.name, b.name));
+  const done = recs.filter(b => b.status === "done").sort((a, b) => natcmp(a.name, b.name));
+  const todo = [...EXP.keys()].filter(k => !S.bins[k]).map(k => EXPNAME.get(k)).sort(natcmp);
+  const total = done.length + open.length + todo.length;
+  const units = recs.reduce((n, b) => n + unitsOf(b), 0);
+  const withDiff = done.filter(b => diffOf(b).nDiff).length;
+  let h = '<div class="hero"><div class="big">' + done.length + " of " + total + " bins counted</div>" +
+          '<div class="prog"><i style="width:' + (total ? Math.round(100 * done.length / total) : 0) + '%"></i></div>' +
+          '<div class="sub">' + units + " units counted" + (done.length ? " &middot; " + withDiff + " bin(s) to check" : "") + "</div></div>";
+  if(!CAT.length) h += '<div class="note bad"><b>No product list on this phone.</b> Open Scan &amp; Go and load Data_master.csv first, then come back.</div>';
+  if(STOCK_DERIVED) h += '<div class="note warn"><b>Load stock.csv once on this page.</b> The copy on this phone was saved by an older Scan &amp; Go and cannot be used for counting. Menu, then Load stock.csv.</div>';
+  else if(!STOCK_AT) h += '<div class="note warn"><b>Ledger stock is not loaded.</b> You can still count, but this page cannot show differences. Load stock.csv from the Menu.</div>';
+  else {
+    const days = (Date.now() - new Date(STOCK_AT).getTime()) / 86400000;
+    h += '<div class="note' + (days > 2 ? " warn" : "") + '">Comparing against ledger stock loaded <b>' + esc(ageOf(STOCK_AT)) + "</b> (" + STOCK_N + " balances)." +
+         (days > 2 ? " Reload stock.csv if you imported scans since then." : "") + "</div>";
+  }
+  h += '<button class="btn primary" data-act="cam">Scan a bin label to start</button>' +
+       '<div class="two"><button class="btn" data-act="pick">Pick a bin</button><button class="btn" data-act="export">Export</button></div>';
+  const row = (b, name) => '<div class="item tap" data-act="open" data-bin="' + esc(name) + '"><div class="nm"><b>' + esc(name) + "</b>" +
+      (b ? "<span>" + b.lines.length + " items &middot; " + unitsOf(b) + " units" + (b.doneAt ? " &middot; " + esc(b.doneAt) : "") + "</span>" : "") +
+      "</div>" + (b ? binChip(b) : '<span class="chip">not counted</span>') + "</div>";
+  if(open.length) h += "<h2>In progress (" + open.length + ')</h2><div class="list">' + open.map(b => row(b, b.name)).join("") + "</div>";
+  if(todo.length) h += "<h2>Not counted yet (" + todo.length + ')</h2><div class="list">' + todo.map(n => row(null, n)).join("") + "</div>";
+  if(done.length) h += "<h2>Counted (" + done.length + ')</h2><div class="list">' + done.map(b => row(b, b.name)).join("") + "</div>";
+  $("view").innerHTML = h; setFoot("");
+}
+function renderBin(){
+  const b = cur();
+  $("view").innerHTML =
+    '<div class="binhead"><div class="lbl">Counting bin</div><div class="name">' + esc(b.name) + '</div><div class="sub" id="binSub"></div></div>' +
+    '<div class="fb" id="fbBox"><div class="t"><b>Ready</b><span>Scan every item in this bin</span></div></div>' +
+    '<button class="btn primary" data-act="cam">Scan items with the camera</button>' +
+    '<div class="typed"><input id="code" placeholder="or type a barcode / set number" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done"><button data-act="typed">Add</button></div>' +
+    '<h2>Counted in this bin</h2><div id="binLines"></div>';
+  setFoot('<button class="btn small" data-act="pause">Pause</button><button class="btn primary" data-act="finish">Finish this bin</button>');
+  renderBinBody();
+}
+function renderBinBody(){
+  const b = cur(); if(!b || view !== "bin") return;
+  const sub = $("binSub"); if(sub) sub.textContent = b.lines.length + " items · " + unitsOf(b) + " units";
+  const box = $("binLines"); if(!box) return;
+  if(!b.lines.length){ box.innerHTML = '<div class="note">Nothing counted yet. If the bin is really empty, tap Finish this bin.</div>'; return; }
+  const lines = b.lines.slice().sort((x, y) => (y.k === lastLineKey) - (x.k === lastLineKey) || natcmp(x.n, y.n));
+  box.innerHTML = '<div class="list">' + lines.map(l =>
+    '<div class="item"><div class="nm"><b>' + esc(l.n) + "</b><span>" + esc(l.unk ? "code " + l.code : [l.r, l.u].filter(Boolean).join(" · ")) + "</span></div>" + qtyHTML(l) + "</div>").join("") + "</div>";
+}
+function whereElse(k, binName){
+  let list = [];
+  for(const x of sameBarcodeKeys(k)) list = list.concat(WHERE.get(x) || []);
+  list = list.filter(w => w.b.toLowerCase() !== binName.toLowerCase());
+  if(!list.length) return "The ledger has none of this anywhere else";
+  return "Ledger has it in: " + list.map(w => w.b + " (" + w.q + ")").join(", ");
+}
+function renderResult(){
+  const b = cur(), d = diffOf(b);
+  const hasExp = !!STOCK_AT || Object.keys(b.exp || {}).length > 0;
+  let h = '<div class="binhead"><div class="lbl">Result</div><div class="name">' + esc(b.name) + '</div><div class="sub">' +
+          b.lines.length + " items &middot; " + unitsOf(b) + " units counted &middot; " + esc(b.doneAt) + "</div></div>";
+  const sect = (title, rows, fmt) => rows.length ? "<h2>" + title + " (" + rows.length + ')</h2><div class="list">' + rows.map(fmt).join("") + "</div>" : "";
+  if(!hasExp) h += '<div class="note warn"><b>Count saved.</b> Ledger stock is not loaded, so differences will be worked out on the PC from the export.</div>';
+  else if(!d.nDiff) h += '<div class="note"><b style="color:var(--ok)">Everything matches the ledger.</b> ' + (d.match.length ? d.match.length + " item(s)." : "The bin is empty and the ledger agrees.") + "</div>";
+  else h += '<div class="note warn"><b>' + d.nDiff + " line(s) differ from the ledger.</b> Look again before you confirm. Tap Fix count to change a number.</div>";
+  if(hasExp){
+    h += sect("Fewer than the ledger", d.short, r => '<div class="item"><div class="nm"><b>' + esc(r.n) + "</b><span>counted " + r.c + ", ledger " + r.e + '</span></div><span class="num neg">' + r.d + "</span></div>");
+    h += sect("More than the ledger", d.over, r => '<div class="item"><div class="nm"><b>' + esc(r.n) + "</b><span>counted " + r.c + ", ledger " + r.e + '</span></div><span class="num pos">+' + r.d + "</span></div>");
+    h += sect("Not expected in this bin", d.unexpected, r => '<div class="item"><div class="nm"><b>' + esc(r.n) + "</b><span>" + esc(whereElse(r.k, b.name)) + '</span></div><span class="num pos">+' + r.c + "</span></div>");
+  }
+  h += sect("Unknown items", d.unknown, r => '<div class="item"><div class="nm"><b>' + esc(r.n) + '</b><span>not in the catalog</span></div><span class="num pos">' + r.c + "</span></div>");
+  const matched = hasExp ? d.match : d.match.concat(d.unexpected, d.over, d.short);
+  if(matched.length){
+    h += "<h2>" + (hasExp ? "Matches" : "Counted") + " (" + matched.length + ")</h2>";
+    h += expandMatches || !hasExp
+      ? '<div class="list">' + matched.map(r => '<div class="item"><div class="nm"><b>' + esc(r.n) + '</b></div><span class="num">' + r.c + "</span></div>").join("") + "</div>"
+      : '<button class="btn" data-act="showmatch">Show the ' + matched.length + " matching item(s)</button>";
+  }
+  $("view").innerHTML = h;
+  setFoot('<button class="btn small" data-act="recount">Fix count</button><button class="btn primary" data-act="confirm">' +
+          (pendingNext ? "Confirm, open " + esc(pendingNext) : "Confirm") + "</button>");
+}
+
+/* ---------------- sheets ---------------- */
+function openGen(title, html){ $("genTitle").textContent = title; $("genBody").innerHTML = html; $("genSheet").classList.add("open"); }
+function closeGen(){ $("genSheet").classList.remove("open"); }
+function openPicker(){
+  openGen("Pick a bin", '<input class="search" id="binSearch" placeholder="Search bins" autocapitalize="off" autocomplete="off"><div id="binPick"></div>');
+  const draw = () => {
+    const q = ($("binSearch").value || "").trim().toLowerCase();
+    const names = [...BINSET.values()].filter(n => !q || n.toLowerCase().includes(q)).sort(natcmp);
+    $("binPick").innerHTML = names.length ? '<div class="list">' + names.map(n => {
+      const b = S.bins[n.toLowerCase()];
+      return '<div class="item tap" data-act="open" data-bin="' + esc(n) + '"><div class="nm"><b>' + esc(n) + "</b></div>" +
+             (b ? binChip(b) : (EXP.has(n.toLowerCase()) ? '<span class="chip">not counted</span>' : "")) + "</div>";
+    }).join("") + "</div>" : '<div class="note">No bins on this phone yet. Scan a bin label, or load bins.csv in Scan &amp; Go.</div>';
+  };
+  $("binSearch").oninput = draw; draw();
+}
+function csvCell(v){
+  let s = String(v == null ? "" : v);
+  /* Never let a spreadsheet run a cell. A plain number is left alone: the Diff
+     column is often negative, and "'-2" would stop being a number. */
+  if(/^[=+\-@]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s)) s = "'" + s;
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function buildCSV(){
+  const H = ["Session","Bin","BinStatus","CountedAt","Recounts","LineType","Ref","UPC","ASIN","Name","ScannedCode","Counted","Expected","Diff","LedgerLoadedAt"];
+  const out = [H.join(",")], sid = S.session ? S.session.id : "";
+  for(const b of Object.values(S.bins).sort((x, y) => natcmp(x.name, y.name))){
+    const done = b.status === "done", exp = done ? (b.exp || {}) : {};
+    const base = [sid, b.name, b.status, done ? b.doneAt : b.startedAt, b.recounts || 0];
+    const seen = new Set();
+    for(const l of b.lines){
+      seen.add(l.k);
+      const e = done ? (exp[l.k] || 0) : "";
+      out.push(base.concat([l.unk ? "unknown" : "counted", l.r, l.u, l.a, l.n, l.code, l.qty, e, done ? l.qty - e : "", b.baseline || ""]).map(csvCell).join(","));
+    }
+    if(done){
+      for(const k of Object.keys(exp)){
+        if(seen.has(k)) continue;
+        const i = INFO.get(k) || {r:k, u:"", a:""};
+        out.push(base.concat(["missing", i.r, i.u, i.a, nameOf(k), "", 0, exp[k], -exp[k], b.baseline || ""]).map(csvCell).join(","));
+      }
+      if(!b.lines.length && !Object.keys(exp).length)
+        out.push(base.concat(["empty", "", "", "", "", "", 0, 0, 0, b.baseline || ""]).map(csvCell).join(","));
+    }
+  }
+  return out.join("\r\n") + "\r\n";
+}
+function openExport(){
+  const recs = Object.values(S.bins), done = recs.filter(b => b.status === "done").length, open = recs.length - done;
+  const todo = [...EXP.keys()].filter(k => !S.bins[k]).length;
+  let h = '<div class="note">' + done + " bin(s) counted" + (open ? ", <b>" + open + " still in progress</b> (included, marked open)" : "") + ".</div>";
+  if(todo) h += '<div class="note warn"><b>' + todo + " bin(s) with ledger stock are not counted yet.</b> You can export now and again later. Every export holds the whole count.</div>";
+  if(!recs.length) h += '<div class="note">Nothing to export yet.</div>';
+  else h += '<button class="btn primary" data-act="download">Download count file</button><button class="btn" data-act="copy">Copy to clipboard</button>' +
+            '<p>Send the file to the PC. Do not open it in Excel. The count stays on this phone until you reset it.</p>';
+  openGen("Export the count", h);
+}
+function download(){
+  const blob = new Blob([buildCSV()], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "count_" + localStamp().replace(/[ :]/g, "-") + ".csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  S.exportedAt = localStamp(); save();
+}
+function openMenu(){
+  const n = Object.keys(S.bins).length;
+  openGen("Menu",
+    '<div class="note">Products: <b>' + CAT.length + "</b>" + (CAT_AT ? " (loaded " + esc(ageOf(CAT_AT)) + ")" : "") +
+    "<br>Ledger stock: <b>" + (STOCK_AT ? STOCK_N + " balances</b> (loaded " + esc(ageOf(STOCK_AT)) + ")" : "not loaded</b>") +
+    "<br>Bins known: <b>" + BINSET.size + "</b>" + (S.session ? "<br>Count session: <b>" + esc(S.session.id) + "</b>" : "") + "</div>" +
+    '<button class="btn" data-act="loadstock">Load stock.csv</button>' +
+    '<button class="btn" data-act="export">Export the count</button>' +
+    '<button class="btn danger" data-act="reset">Reset the count (' + n + " bins)</button>" +
+    "<p>Stock Count " + COUNT_VERSION + ". This page only counts. Receiving, moving and packing stay in Scan &amp; Go.</p>");
+}
+let qtyKey = null;
+function openQty(k){
+  const b = cur(); const l = b && b.lines.find(x => x.k === k); if(!l) return;
+  qtyKey = k; $("qtyTitle").textContent = l.n; $("qtyInput").value = l.qty;
+  $("qtySheet").classList.add("open");
+  setTimeout(() => { $("qtyInput").focus(); $("qtyInput").select(); }, 60);
+}
+function okQty(){
+  const v = parseInt($("qtyInput").value, 10);
+  $("qtySheet").classList.remove("open");
+  if(isNaN(v) || v < 0) return;
+  changeQty(qtyKey, v);
+}
+
+/* ---------------- camera ---------------- */
+let scanner = null, camLast = "", camLastT = 0;
+function openCam(){
+  $("camTitle").textContent = (view === "bin" && cur()) ? "Counting " + cur().name : "Scan a bin label";
+  $("camFb").className = "fb"; $("camFb").innerHTML = fbHTML("", "Ready", (view === "bin" && cur()) ? "Point at an item barcode" : "Point at a bin label");
+  $("camSheet").classList.add("open");
+  camLast = ""; camLastT = 0;
+  if(typeof Html5Qrcode === "undefined"){
+    $("reader").innerHTML = '<div style="color:var(--warn);padding:26px 18px;font-size:13px;line-height:1.6">The camera reader did not load. Type the code instead, or use a Bluetooth scanner.</div>';
+    return;
+  }
+  scanner = new Html5Qrcode("reader");
+  scanner.start({facingMode:"environment"}, {fps:10, qrbox:{width:250, height:180}}, txt => camDecode(String(txt).trim()), () => {})
+    .catch(err => {
+      scanner = null;
+      $("reader").innerHTML = '<div style="color:var(--warn);padding:26px 18px;font-size:13px;line-height:1.6">Camera unavailable: ' + esc(err) +
+        ".<br><br>The camera needs the hosted (https) page. Type the code instead, or use a Bluetooth scanner.</div>";
+    });
+}
+function camDecode(code){
+  if(!code) return;
+  const now = Date.now();
+  if(code === camLast && now - camLastT < 1500) return;    // same label still in view
+  if(now - camLastT < 500) return;                          // short pause between reads
+  camLast = code; camLastT = now;
+  handleScan(code);
+}
+function stopCam(){
+  $("camSheet").classList.remove("open");
+  if(scanner){ const s = scanner; scanner = null; try{ s.stop().then(() => s.clear()).catch(() => {}); }catch(e){} }
+  $("reader").innerHTML = "";
+}
+
+/* ---------------- events ---------------- */
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-act]"); if(!el) return;
+  const act = el.dataset.act, k = el.dataset.k;
+  if(act === "menu") openMenu();
+  else if(act === "cam") openCam();
+  else if(act === "camdone") stopCam();
+  else if(act === "genclose") closeGen();
+  else if(act === "pick") openPicker();
+  else if(act === "open"){ closeGen(); onBin(el.dataset.bin); }
+  else if(act === "export"){ openExport(); }
+  else if(act === "download") download();
+  else if(act === "copy") navigator.clipboard.writeText(buildCSV()).then(() => openGen("Copied", '<div class="note">The count is on the clipboard.</div>'), err => openGen("Copy failed", '<div class="note bad">' + esc(err) + "</div>"));
+  else if(act === "loadstock"){ closeGen(); $("stockInput").click(); }
+  else if(act === "reset"){
+    closeGen();
+    const n = Object.keys(S.bins).length;
+    ask("Reset the whole count?", n + " bin(s) will be cleared from this phone." + (S.exportedAt ? "\nLast export: " + S.exportedAt : "\nYou have NOT exported this count yet."),
+        [{label:"Keep the count", kind:"primary"}, {label:"Clear everything", kind:"danger", fn:() => { S = {v:1, session:null, bins:{}, cur:null}; pendingNext = null; save(); view = "home"; loadShared(); render(); }}]);
+  }
+  else if(act === "typed"){ const i = $("code"); if(i){ const v = i.value; i.value = ""; handleScan(v); } }
+  else if(act === "inc"){ const l = cur() && cur().lines.find(x => x.k === k); if(l) changeQty(k, l.qty + 1); }
+  else if(act === "dec"){ const l = cur() && cur().lines.find(x => x.k === k); if(l) changeQty(k, l.qty - 1); }
+  else if(act === "setqty") openQty(k);
+  else if(act === "qtyok") okQty();
+  else if(act === "qtycancel") $("qtySheet").classList.remove("open");
+  else if(act === "pause"){ stopCam(); view = "home"; render(); }
+  else if(act === "finish"){
+    const b = cur();
+    if(b && !b.lines.length) ask("Is " + b.name + " really empty?", "Nothing was counted in this bin.", [{label:"Yes, it is empty", kind:"primary", fn:finishBin}, {label:"Keep counting"}]);
+    else finishBin();
+  }
+  else if(act === "showmatch"){ expandMatches = true; renderResult(); }
+  else if(act === "recount"){ const b = cur(); if(b){ b.status = "open"; b.recounts = (b.recounts || 0) + 1; b.doneAt = ""; save(); view = "bin"; render(); fb("", "Fix the numbers", "Tap a number to type it, or scan again. Then Finish this bin."); } }
+  else if(act === "confirm"){ const next = pendingNext; pendingNext = null; S.cur = null; save(); view = "home"; if(next) openBin(next); else render(); }
+});
+document.addEventListener("keydown", e => {
+  const t = e.target;
+  if(t && t.id === "code" && e.key === "Enter"){ const v = t.value; t.value = ""; handleScan(v); e.preventDefault(); return; }
+  if(t && t.id === "qtyInput" && e.key === "Enter"){ okQty(); e.preventDefault(); return; }
+  if(t && t.closest && t.closest("input,textarea")) return;
+  /* a Bluetooth scanner types fast and ends with Enter. Catch it without a focused field */
+  if(e.key === "Enter"){ if(kbuf){ const c = kbuf; kbuf = ""; handleScan(c); } return; }
+  if(e.key && e.key.length === 1){ const now = Date.now(); if(now - kT > 400) kbuf = ""; kbuf += e.key; kT = now; }
+});
+let kbuf = "", kT = 0;
+$("stockInput").addEventListener("change", e => {
+  const f = e.target.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = ev => {
+    try{
+      const s = parseStockCSV(String(ev.target.result));
+      localStorage.setItem("scanpwa_stock", JSON.stringify({idx:s.idx, n:s.n, loadedAt:new Date().toISOString(), rows:s.rows}));
+      loadShared(); render();
+      ask("Ledger stock loaded", s.n + " balances from " + f.name + ".\nBins you already finished keep the numbers they were compared with.", [{label:"OK", kind:"primary"}]);
+    }catch(err){ ask("Could not read that file", String(err.message || err), [{label:"OK", kind:"primary"}]); }
+  };
+  rd.readAsText(f); e.target.value = "";
+});
+
+/* ---------------- start ---------------- */
+loadShared();
+if(S.cur && S.bins[S.cur]) view = S.bins[S.cur].status === "done" ? "result" : "bin"; else S.cur = null;
+render();
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){ navigator.serviceWorker.register("sw.js").catch(() => {}); }
+</script>
+</body>
+</html>
