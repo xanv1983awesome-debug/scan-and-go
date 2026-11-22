@@ -515,7 +515,7 @@ document.querySelector('#newItemSheet .eb2').innerHTML = ICONS.x+'Cancel';
    keep APP_VERSION equal to the service-worker cache suffix (build_shell.py --repo
    writes it into the repo's sw.js for you). The version shows in the app bar so a
    stale install is visible at a glance instead of being guessed at. */
-const APP_VERSION = "v18";
+const APP_VERSION = "v19";
 const APP_UPDATED = "2026-11-21";
 
 const SNAPSHOT_DATE = "2026-06-27T00:00:00Z";
@@ -768,11 +768,37 @@ function openAddItem(prefillUpc){
   document.getElementById('newItemSheet').classList.add('open');
 }
 function closeAddItem(){ document.getElementById('newItemSheet').classList.remove('open'); focusScan(); }
+/* A reference is one token with a digit in it (60448, GWB36-JDL94, B0F2BFSPBN);
+   a product name has spaces. Name-looks-like-a-code AND ref-looks-like-a-name
+   together is the swap; either one alone is left alone. */
+function looksSwapped(name, ref){
+  return !!name && !!ref && /^[A-Za-z0-9\-]{3,20}$/.test(name) && /\d/.test(name) && /\s/.test(ref);
+}
+function oddUpcLength(upc){
+  return /^\d+$/.test(upc) && [8,12,13,14].indexOf(upc.length) < 0;
+}
 function confirmAddItem(){
-  const name = document.getElementById('niName').value.trim();
+  let name = document.getElementById('niName').value.trim();
   const upc = document.getElementById('niUpc').value.trim();
-  const ref = document.getElementById('niRef').value.trim();
+  let ref = document.getElementById('niRef').value.trim();
   if(!upc && !ref){ alert('Enter at least a UPC or a Reference #.'); return; }
+  /* v19: two slips found in the real New SKU queue on 2026-11-21. Six items had the
+     set number typed into "Product name" and the name typed into "Reference #";
+     one UPC was typed with a digit missing (11 digits), which Excel would have
+     added as a second, junk row for an item it already had. Both are questions,
+     not blocks: an item with no barcode is legitimately keyed by its ASIN. */
+  if(looksSwapped(name, ref)){
+    if(confirm('These two look swapped:\n\nProduct name:  '+name+'\nReference #:  '+ref+
+               '\n\nOK = swap them\nCancel = keep them as typed')){
+      const t = name; name = ref; ref = t;
+      document.getElementById('niName').value = name;
+      document.getElementById('niRef').value = ref;
+    }
+  }
+  if(oddUpcLength(upc)){
+    if(!confirm('This UPC has '+upc.length+' digits:\n\n'+upc+'\n\nA barcode has 12 or 13.\n\n'+
+                'OK = keep it\nCancel = go back and fix it')) return;
+  }
   if(upc && IDX[upc]){ alert('That UPC is already in the catalog: '+IDX[upc].n); return; }
   if(ref && IDX[ref]){ alert('That Reference # is already in the catalog: '+IDX[ref].n); return; }
   const item = {n: name||'(unnamed — add name in Excel)', u: upc, r: ref, a: ''};
@@ -1575,18 +1601,37 @@ function fileStamp(d){
   const p = n => String(n).padStart(2,'0');
   return localDate(d)+'-'+p(d.getHours())+'-'+p(d.getMinutes());
 }
+/* v19: a line that takes stock OUT of Receiving carries its own arrival row.
+   The workbook's import refuses an outbound line unless the ledger already holds
+   that stock in the From bin (ImportStaging.OutboundCheck). Receipts only write the
+   cost table, so Receiving was always empty in the ledger: every Receive scan, and
+   every pack straight out of Receiving, came back "Only 0 in Receiving" until a
+   helper file was added by hand (2026-10-13, 2026-11-21). The arrival is a
+   Transaction / Purchase / (blank) -> Receiving row for the same item and
+   quantity, written directly above the line it feeds (rows import top to bottom).
+   This does NOT decide whether the scanned quantity matches the receipts: the PC
+   compares receipts with placed stock afterwards (Tools\receipt_check.py). */
+function needsArrival(r){ return String(r.from||'').trim().toLowerCase()==='receiving'; }
+function arrivalCount(){ return rows.filter(needsArrival).length; }
+function csvLine(rec){
+  return HEADERS.map(h=>{
+    let v = csvSafe(rec[h]===undefined?'':rec[h]);
+    return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;
+  }).join(',');
+}
 function buildCSV(){
   const today = localDate();
   const lines = [HEADERS.join(',')];
   for(const r of rows){
     const notes = r.asinOnly ? 'Scanner batch; NO UPC/REF - matched by ASIN, verify Input Item' : 'Scanner batch';
-    const rec = {"ImportTarget":"Transaction","Input Item":r.upc,"Date":today,
+    if(needsArrival(r)){
+      lines.push(csvLine({"ImportTarget":"Transaction","Input Item":r.upc,"Date":today,
+        "Trans Type":"Purchase","Qty":r.qty,"From Loc":"","To Loc":"Receiving",
+        "Notes":"Scanner batch; arrival into Receiving for the next line"}));
+    }
+    lines.push(csvLine({"ImportTarget":"Transaction","Input Item":r.upc,"Date":today,
       "Trans Type":r.type,"Qty":r.qty,"From Loc":r.from,"To Loc":r.to,
-      "Notes":notes};
-    lines.push(HEADERS.map(h=>{
-      let v = csvSafe(rec[h]===undefined?'':rec[h]);
-      return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;
-    }).join(','));
+      "Notes":notes}));
   }
   return lines.join('\r\n');
 }
@@ -1818,6 +1863,8 @@ document.getElementById('btnExport').onclick = ()=>{
     ('<b>'+rows.length+'</b> line(s), <b>'+units+'</b> units.<br>'+
     'Save the CSV into <b>Staging\\</b>, then paste its rows into the Staging sheet '+
     'and run <b>ImportStaging</b>.'+
+    (arrivalCount()?'<br><b>'+arrivalCount()+'</b> line(s) come out of Receiving. The file adds an '+
+     'arrival row above each one, so it has <b>'+(rows.length+arrivalCount())+'</b> rows and imports as it is.':'')+
     (flagged?'<div class="warnbox">'+ICONS.warn+' <b>'+flagged+'</b> line(s) matched by ASIN only (no UPC/Ref#) '+
      'and have a blank Input Item — ImportStaging will silently skip them. Add a UPC or set # on the '+
      'New_SKUs sheet first, or fix the Input Item cell by hand before importing.</div>':''))
