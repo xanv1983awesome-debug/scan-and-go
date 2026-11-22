@@ -515,7 +515,7 @@ document.querySelector('#newItemSheet .eb2').innerHTML = ICONS.x+'Cancel';
    keep APP_VERSION equal to the service-worker cache suffix (build_shell.py --repo
    writes it into the repo's sw.js for you). The version shows in the app bar so a
    stale install is visible at a glance instead of being guessed at. */
-const APP_VERSION = "v17";
+const APP_VERSION = "v18";
 const APP_UPDATED = "2026-11-21";
 
 const SNAPSHOT_DATE = "2026-06-27T00:00:00Z";
@@ -1562,8 +1562,21 @@ function csvSafe(v){
   const s = String(v==null?'':v);
   return /^[=+\-@]/.test(s) ? "'"+s : s;
 }
+/* v18: LOCAL calendar date and time. toISOString() is UTC, so a scan exported in
+   the evening was stamped with TOMORROW's date (exported 2026-11-21 23:04 in
+   Vancouver, every row said 2026-11-22). The ledger date and the file name are both local now. */
+function localDate(d){
+  d = d || new Date();
+  const p = n => String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+}
+function fileStamp(d){
+  d = d || new Date();
+  const p = n => String(n).padStart(2,'0');
+  return localDate(d)+'-'+p(d.getHours())+'-'+p(d.getMinutes());
+}
 function buildCSV(){
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDate();
   const lines = [HEADERS.join(',')];
   for(const r of rows){
     const notes = r.asinOnly ? 'Scanner batch; NO UPC/REF - matched by ASIN, verify Input Item' : 'Scanner batch';
@@ -1679,7 +1692,7 @@ function downloadWeightsCSV(){
   const blob = new Blob([buildWeightsCSV()], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'boxweights_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.csv';
+  a.download = 'boxweights_'+fileStamp()+'.csv';
   document.body.appendChild(a); a.click(); a.remove();
 }
 
@@ -1687,7 +1700,7 @@ function downloadBoxCSV(){
   const blob = new Blob([buildBoxCSV()], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'boxcontent_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.csv';
+  a.download = 'boxcontent_'+fileStamp()+'.csv';
   document.body.appendChild(a); a.click(); a.remove();
 }
 async function copyBoxCSV(){
@@ -1724,7 +1737,7 @@ function downloadTotalsCSV(){
   const blob = new Blob([buildTotalsCSV()], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'shipment_totals_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.csv';
+  a.download = 'shipment_totals_'+fileStamp()+'.csv';
   document.body.appendChild(a); a.click(); a.remove();
 }
 
@@ -1783,7 +1796,7 @@ function downloadNewSkuCSV(){
   const blob = new Blob([buildNewSkuCSV()], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'new_skus_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.csv';
+  a.download = 'new_skus_'+fileStamp()+'.csv';
   document.body.appendChild(a); a.click(); a.remove();
 }
 async function copyNewSkuCSV(){
@@ -1849,7 +1862,7 @@ function downloadCSV(){
   const blob = new Blob([buildCSV()], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'scan_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.csv';
+  a.download = 'scan_'+fileStamp()+'.csv';
   document.body.appendChild(a); a.click(); a.remove();
 }
 async function copyCSV(){
