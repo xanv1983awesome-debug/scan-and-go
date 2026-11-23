@@ -515,8 +515,8 @@ document.querySelector('#newItemSheet .eb2').innerHTML = ICONS.x+'Cancel';
    keep APP_VERSION equal to the service-worker cache suffix (build_shell.py --repo
    writes it into the repo's sw.js for you). The version shows in the app bar so a
    stale install is visible at a glance instead of being guessed at. */
-const APP_VERSION = "v19";
-const APP_UPDATED = "2026-11-21";
+const APP_VERSION = "v20";
+const APP_UPDATED = "2026-11-22";
 
 const SNAPSHOT_DATE = "2026-06-27T00:00:00Z";
 const CATALOG = [];  // shell build: catalog is never published — load Data_master.csv on-device
@@ -1611,7 +1611,14 @@ function fileStamp(d){
    quantity, written directly above the line it feeds (rows import top to bottom).
    This does NOT decide whether the scanned quantity matches the receipts: the PC
    compares receipts with placed stock afterwards (Tools\receipt_check.py). */
-function needsArrival(r){ return String(r.from||'').trim().toLowerCase()==='receiving'; }
+/* v20: the same holds for Unsorted. In the owner's ledger "Unsorted -> FBA" means
+   stock that was never shelved and went straight into a shipment (owner, 2026-11-22).
+   The import guard treats Unsorted like any other bin, so those lines came back
+   "Only 0 in Unsorted": two lines of the 2026-08-15 scan never reached the ledger.
+   The arrival row names the line's own From text, so the guard always finds it. */
+const ARRIVAL_SOURCES = {receiving:'Receiving', unsorted:'Unsorted'};
+function arrivalSource(r){ return ARRIVAL_SOURCES[String(r.from||'').trim().toLowerCase()] || ''; }
+function needsArrival(r){ return !!arrivalSource(r); }
 function arrivalCount(){ return rows.filter(needsArrival).length; }
 function csvLine(rec){
   return HEADERS.map(h=>{
@@ -1624,10 +1631,11 @@ function buildCSV(){
   const lines = [HEADERS.join(',')];
   for(const r of rows){
     const notes = r.asinOnly ? 'Scanner batch; NO UPC/REF - matched by ASIN, verify Input Item' : 'Scanner batch';
-    if(needsArrival(r)){
+    const src = arrivalSource(r);
+    if(src){
       lines.push(csvLine({"ImportTarget":"Transaction","Input Item":r.upc,"Date":today,
-        "Trans Type":"Purchase","Qty":r.qty,"From Loc":"","To Loc":"Receiving",
-        "Notes":"Scanner batch; arrival into Receiving for the next line"}));
+        "Trans Type":"Purchase","Qty":r.qty,"From Loc":"","To Loc":r.from,
+        "Notes":"Scanner batch; arrival into "+src+" for the next line"}));
     }
     lines.push(csvLine({"ImportTarget":"Transaction","Input Item":r.upc,"Date":today,
       "Trans Type":r.type,"Qty":r.qty,"From Loc":r.from,"To Loc":r.to,
@@ -1863,7 +1871,7 @@ document.getElementById('btnExport').onclick = ()=>{
     ('<b>'+rows.length+'</b> line(s), <b>'+units+'</b> units.<br>'+
     'Save the CSV into <b>Staging\\</b>, then paste its rows into the Staging sheet '+
     'and run <b>ImportStaging</b>.'+
-    (arrivalCount()?'<br><b>'+arrivalCount()+'</b> line(s) come out of Receiving. The file adds an '+
+    (arrivalCount()?'<br><b>'+arrivalCount()+'</b> line(s) come out of Receiving or Unsorted. The file adds an '+
      'arrival row above each one, so it has <b>'+(rows.length+arrivalCount())+'</b> rows and imports as it is.':'')+
     (flagged?'<div class="warnbox">'+ICONS.warn+' <b>'+flagged+'</b> line(s) matched by ASIN only (no UPC/Ref#) '+
      'and have a blank Input Item — ImportStaging will silently skip them. Add a UPC or set # on the '+
